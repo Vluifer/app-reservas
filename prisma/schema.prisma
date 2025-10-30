@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+ output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+// Modelo de Usuario
+model Usuario {
+  id            String    @id @default(cuid())
+  nombre        String
+  email         String    @unique
+  password      String
+  telefono      String?
+  rol           RolUsuario @default(CLIENTE)
+  emailVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relaciones
+  reservas      Reserva[]
+  apartamentos  Apartamento[] // Si es PROPIETARIO
+}
+
+// Modelo de Apartamento
+model Apartamento {
+  id               String    @id @default(cuid())
+  nombre           String
+  descripcion      String    @db.Text
+  direccion        String
+  ciudad           String
+  estado           String
+  codigoPostal     String?
+  
+  // Características
+  capacidad        Int
+  numHabitaciones  Int
+  numBanos         Int
+  metrosCuadrados  Float?
+  
+  // Precios
+  precioPorNoche   Decimal   @db.Decimal(10, 2)
+  tarifaLimpieza   Decimal   @db.Decimal(10, 2) @default(0)
+  
+  // Amenidades (guardadas como JSON)
+  amenidades       Json?     // ["wifi", "piscina", "parking", etc]
+  
+  // Imágenes
+  imagenes         Imagen[]
+  
+  // Estado
+  estadoApartamento EstadoApartamento @default(ACTIVO)
+  
+  // Relaciones
+  propietarioId    String
+  propietario      Usuario   @relation(fields: [propietarioId], references: [id], onDelete: Cascade)
+  reservas         Reserva[]
+  
+  // Fechas
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  @@index([ciudad, estadoApartamento])
+  @@index([precioPorNoche])
+}
+
+// Modelo de Imagen
+model Imagen {
+  id            String    @id @default(cuid())
+  url           String
+  publicId      String?   // Para servicios como Cloudinary
+  nombreArchivo String
+  orden         Int       @default(0)
+  esPrincipal   Boolean   @default(false)
+  
+  // Relación
+  apartamentoId String
+  apartamento   Apartamento @relation(fields: [apartamentoId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime  @default(now())
+  
+  @@index([apartamentoId, orden])
+}
+
+// Modelo de Reserva
+model Reserva {
+  id              String    @id @default(cuid())
+  codigoReserva   String    @unique @default(cuid())
+  
+  // Fechas
+  fechaInicio     DateTime
+  fechaFin        DateTime
+  checkInHora     String    @default("15:00")
+  checkOutHora    String    @default("12:00")
+  
+  // Huéspedes
+  numHuespedes    Int
+  numAdultos      Int
+  numNinos        Int       @default(0)
+  
+  // Precios
+  precioNoches    Decimal   @db.Decimal(10, 2)
+  tarifaLimpieza  Decimal   @db.Decimal(10, 2)
+  tarifaServicio  Decimal   @db.Decimal(10, 2)
+  impuestos       Decimal   @db.Decimal(10, 2)
+  precioTotal     Decimal   @db.Decimal(10, 2)
+  
+  // Estado y política
+  estado          EstadoReserva @default(PENDIENTE)
+  politicaCancelacion PoliticaCancelacion @default(FLEXIBLE)
+  
+  // Información del cliente (desnormalizado para historial)
+  clienteNombre   String
+  clienteEmail    String
+  clienteTelefono String
+  
+  // Notas
+  notasCliente    String?   @db.Text
+  notasInternas   String?   @db.Text
+  
+  // Relaciones
+  apartamentoId   String
+  apartamento     Apartamento @relation(fields: [apartamentoId], references: [id])
+  clienteId       String
+  cliente         Usuario   @relation(fields: [clienteId], references: [id])
+  
+  // Fechas de sistema
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  canceladaEn     DateTime?
+  confirmadaEn    DateTime?
+  expiraEn        DateTime? // Para reservas PENDIENTES
+  
+  @@index([apartamentoId, estado])
+  @@index([fechaInicio, fechaFin])
+  @@index([clienteId])
+  @@index([estado, expiraEn])
+}
+
+// ENUMS - Aquí está la explicación de enum
+
+// Rol del usuario en el sistema
+enum RolUsuario {
+  CLIENTE       // Usuario que reserva apartamentos
+  PROPIETARIO   // Usuario que publica apartamentos
+  ADMIN         // Administrador del sistema
+}
+
+// Estado del apartamento
+enum EstadoApartamento {
+  ACTIVO        // Disponible para reservas
+  INACTIVO      // No disponible temporalmente
+  MANTENIMIENTO // En mantenimiento
+  ELIMINADO     // Eliminado (soft delete)
+}
+
+// Estado de la reserva
+enum EstadoReserva {
+  PENDIENTE     // Esperando confirmación de pago
+  CONFIRMADA    // Pago confirmado, reserva activa
+  EN_CURSO      // El huésped ya hizo check-in
+  COMPLETADA    // Check-out realizado
+  CANCELADA     // Cancelada por cliente o admin
+  RECHAZADA     // Rechazada por el propietario
+  EXPIRADA      // Expiró el tiempo de pago
+}
+
+// Política de cancelación
+enum PoliticaCancelacion {
+  FLEXIBLE      // Reembolso 100% hasta 24h antes
+  MODERADA      // Reembolso 50% hasta 5 días antes
+  ESTRICTA      // Sin reembolso
+}
