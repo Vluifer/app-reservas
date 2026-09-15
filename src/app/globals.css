@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+/* Fuentes: variables inyectadas por next/font en <html> */
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
+}
+
+@theme {
+  /* Neutros cálidos (stone) */
+  --color-fondo: #fafaf9;
+  --color-superficie: #ffffff;
+  --color-hundido: #f5f5f4; /* chips, skeletons, hover. Sobre él NO usar tinta-tenue */
+  --color-borde: #e7e5e4; /* decorativo: tarjetas, divisores */
+  --color-borde-control: #8c857f; /* inputs y botón secundario: 3.64:1 */
+  --color-tinta: #1c1917; /* texto principal: 16.74:1 */
+  --color-tinta-suave: #57534e; /* texto secundario: 7.30:1 */
+  --color-tinta-tenue: #78716c; /* solo placeholder/meta sobre blanco o fondo: 4.59:1 */
+  --color-tinta-invertida-suave: #d6d3d1; /* secundario sobre tinta: 11.74:1 */
+
+  /* Acento: terracota */
+  --color-acento: #c4401c; /* CTA, foco, marca. Blanco encima: 5.13:1 */
+  --color-acento-hover: #a3341a;
+  --color-acento-texto: #a3341a; /* texto de acento sobre acento-suave: 6.22:1 */
+  --color-acento-suave: #fff1ec;
+  --color-acento-claro: #ff8a6e; /* SOLO sobre tinta: 7.59:1 */
+
+  /* Semánticos */
+  --color-exito-texto: #166534;
+  --color-exito-suave: #dcfce7;
+  --color-aviso-texto: #854d0e;
+  --color-aviso-suave: #fef9c3;
+  --color-peligro: #b91c1c; /* blanco encima: 6.47:1 */
+  --color-peligro-hover: #991b1b;
+  --color-peligro-texto: #b91c1c;
+  --color-peligro-suave: #fef2f2;
+
+  /* Tipografía display (hero) */
+  --text-display: clamp(2.5rem, 1.5rem + 4.2vw, 4.75rem);
+  --text-display--line-height: 1.02;
+  --text-display--letter-spacing: -0.015em;
+
+  /* Radios */
+  --radius-control: 0.75rem;
+  --radius-tarjeta: 1rem;
+  --radius-bloque: 1.5rem;
+
+  /* Sombras: solo en elementos flotantes */
+  --shadow-flotante: 0 1px 2px rgb(28 25 23 / 0.04), 0 16px 40px -16px rgb(28 25 23 / 0.22);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    scroll-padding-top: 5rem; /* el header sticky no tapa el foco (WCAG 2.4.11) */
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* La barra fija de reservar en móvil no debe tapar el foco */
+  :root:has(#barra-reserva) {
+    scroll-padding-bottom: 6rem;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-acento);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-acento-suave);
+    color: var(--color-tinta);
+  }
+
+  /* Tailwind v4 quita cursor:pointer a los botones */
+  button:not(:disabled),
+  [role="button"]:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

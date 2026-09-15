@@ -1,1 +1,0 @@
-//Detalle público del apartamento

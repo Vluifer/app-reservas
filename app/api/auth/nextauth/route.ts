@@ -1,1 +1,0 @@
-// NextAuth configuration and route handling
