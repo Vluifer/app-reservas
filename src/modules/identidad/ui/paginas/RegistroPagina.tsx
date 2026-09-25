@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { claseEnlace } from '@/shared/ui/componentes'
-import { obtenerActor } from '../../infrastructure/sesion'
+import { obtenerActor } from '../sesion'
 import { FormularioRegistro } from '../componentes/formulario-registro'
 
 export default async function RegistroPagina() {

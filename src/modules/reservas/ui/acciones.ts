@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { reservas } from '@/contenedor'
-import { requerirActor } from '@/modules/identidad/infrastructure/sesion'
+import { requerirActor } from '@/modules/identidad/ui/sesion'
 import { ROLES_ANFITRION } from '@/shared/domain/Actor'
 import { conParametro, ejecutarYVolver, manejarErrores, type EstadoAccion } from '@/shared/ui/acciones'
 import { numero, texto, textoOpcional } from '@/shared/ui/formulario'

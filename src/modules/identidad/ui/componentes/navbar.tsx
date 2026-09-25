@@ -1,9 +1,9 @@
 import Link from 'next/link'
-import { obtenerActor } from '@/modules/identidad/infrastructure/sesion'
-import { cerrarSesion } from '@/modules/identidad/ui/acciones'
 import { esAnfitrion } from '@/shared/domain/Actor'
-import { claseBoton } from './componentes'
-import { EnlaceActivo } from './enlace-activo'
+import { claseBoton } from '@/shared/ui/componentes'
+import { EnlaceActivo } from '@/shared/ui/enlace-activo'
+import { cerrarSesion } from '../acciones'
+import { obtenerActor } from '../sesion'
 
 const ENLACE = 'inline-flex min-h-11 items-center rounded-full px-3.5 text-sm font-medium transition-colors'
 const ACTIVO = 'bg-hundido text-tinta'

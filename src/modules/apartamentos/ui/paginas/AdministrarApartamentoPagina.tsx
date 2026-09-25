@@ -1,9 +1,8 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { apartamentos } from '@/contenedor'
-import { requerirActor } from '@/modules/identidad/infrastructure/sesion'
-import { esAdmin, ROLES_ANFITRION } from '@/shared/domain/Actor'
+import { requerirActor } from '@/modules/identidad/ui/sesion'
+import { ROLES_ANFITRION } from '@/shared/domain/Actor'
 import { siNoExiste404 } from '@/shared/ui/acciones'
 import { BotonEnviar, BotonEnviarConfirmando, BotonIconoConfirmando } from '@/shared/ui/boton-enviar'
 import { claseBoton, claseEnlaceVolver, MensajesDeRuta, Selector, Tarjeta } from '@/shared/ui/componentes'
@@ -45,8 +44,7 @@ function SeccionAjustes({
 export default async function AdministrarApartamentoPagina({ params, searchParams }: Props) {
   const actor = await requerirActor(ROLES_ANFITRION)
   const [{ id }, mensajes] = await Promise.all([params, searchParams])
-  const apartamento = await apartamentos.obtener.ejecutar(id, actor).catch(siNoExiste404)
-  if (apartamento.propietarioId !== actor.id && !esAdmin(actor)) notFound()
+  const apartamento = await apartamentos.obtenerParaGestion.ejecutar(actor, id).catch(siNoExiste404)
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

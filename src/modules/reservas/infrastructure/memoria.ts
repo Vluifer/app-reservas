@@ -48,6 +48,13 @@ export class EnMemoriaReservaRepository implements ReservaRepository {
     return this.todas().filter((r) => r.estaVencida(ahora))
   }
 
+  async listarEstadiasPorAvanzar(ahora: Date) {
+    return this.todas().filter(
+      (r) =>
+        (r.estado === 'CONFIRMADA' && r.estadiaEmpezada(ahora)) || (r.estado === 'EN_CURSO' && r.estadiaTerminada(ahora)),
+    )
+  }
+
   async fechasOcupadas(apartamentoId: string, ahora: Date) {
     return this.todas()
       .filter((r) => r.apartamentoId === apartamentoId && r.ocupaFechas(ahora) && r.rango.fin > hoy(ahora))

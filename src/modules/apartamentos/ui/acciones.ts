@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { apartamentos } from '@/contenedor'
-import { requerirActor } from '@/modules/identidad/infrastructure/sesion'
+import { requerirActor } from '@/modules/identidad/ui/sesion'
 import { ROLES_ANFITRION } from '@/shared/domain/Actor'
 import type { PoliticaCancelacion } from '@/shared/domain/PoliticaCancelacion'
 import { conParametro, ejecutarYVolver, manejarErrores, type EstadoAccion } from '@/shared/ui/acciones'

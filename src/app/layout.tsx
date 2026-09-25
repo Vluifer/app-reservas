@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Instrument_Serif } from 'next/font/google'
-import { Navbar } from '@/shared/ui/navbar'
+import { Navbar } from '@/modules/identidad/ui/componentes/navbar'
 import './globals.css'
 
 const sans = Geist({ subsets: ['latin'], variable: '--font-geist-sans', display: 'swap' })

@@ -6,6 +6,7 @@ import {
   ActualizarApartamento,
   CambiarEstadoApartamento,
   ListarApartamentosDePropietario,
+  ObtenerApartamentoParaGestion,
   PublicarApartamento,
 } from './application/GestionApartamentos'
 import { EliminarImagenApartamento, SubirImagenesApartamento } from './application/ImagenesApartamento'
@@ -88,6 +89,19 @@ describe('Módulo apartamentos', () => {
       expect((await obtener.ejecutar(id, propietario)).estado).toBe('INACTIVO')
     })
 
+    it('la pantalla de administración solo la abre el dueño o un admin (a los demás: "no encontrado")', async () => {
+      const { id } = await publicar.ejecutar(propietario, datosApartamento())
+      const obtener = new ObtenerApartamentoParaGestion(repo)
+
+      expect((await obtener.ejecutar(propietario, id)).id).toBe(id)
+      expect((await obtener.ejecutar(admin, id)).id).toBe(id)
+      await expect(obtener.ejecutar(otroPropietario, id)).rejects.toThrow(NoEncontradoError)
+      await expect(obtener.ejecutar(propietario, 'no-existe')).rejects.toThrow(NoEncontradoError)
+
+      await new CambiarEstadoApartamento(repo).ejecutar(propietario, id, 'ELIMINADO')
+      await expect(obtener.ejecutar(propietario, id)).rejects.toThrow(NoEncontradoError)
+    })
+
     it('busca por ciudad y huéspedes, y excluye los ocupados en las fechas pedidas', async () => {
       const medellin = await publicar.ejecutar(propietario, datosApartamento({ ciudad: 'Medellín', capacidad: 2 }))
       const grande = await publicar.ejecutar(propietario, datosApartamento({ ciudad: 'Medellín', capacidad: 6 }))
@@ -123,6 +137,31 @@ describe('Módulo apartamentos', () => {
       await expect(
         new SubirImagenesApartamento(repo, almacen).ejecutar(propietario, id, [imagen('doc.pdf', { tipo: 'application/pdf' })]),
       ).rejects.toThrow('formato no permitido')
+      expect(almacen.subidas).toEqual([])
+    })
+
+    it('no permite pasar de 10 imágenes y lo verifica antes de subir nada', async () => {
+      const { id } = await publicar.ejecutar(propietario, datosApartamento())
+      const subir = new SubirImagenesApartamento(repo, almacen)
+      const varias = (n: number, prefijo: string) => Array.from({ length: n }, (_, i) => imagen(`${prefijo}${i}.jpg`))
+
+      await expect(subir.ejecutar(propietario, id, varias(11, 'a'))).rejects.toThrow('máximo 10 imágenes')
+      expect(almacen.subidas).toEqual([])
+
+      await subir.ejecutar(propietario, id, varias(9, 'b'))
+      await expect(subir.ejecutar(propietario, id, varias(2, 'c'))).rejects.toThrow('máximo 10 imágenes')
+      expect(almacen.subidas).toHaveLength(9)
+      expect((await subir.ejecutar(propietario, id, varias(1, 'd'))).imagenes).toHaveLength(10)
+    })
+
+    it('rechaza imágenes de más de 5 MB y la subida vacía', async () => {
+      const { id } = await publicar.ejecutar(propietario, datosApartamento())
+      const subir = new SubirImagenesApartamento(repo, almacen)
+
+      await expect(subir.ejecutar(propietario, id, [imagen('grande.jpg', { tamano: 5 * 1024 * 1024 + 1 })])).rejects.toThrow(
+        '5 MB',
+      )
+      await expect(subir.ejecutar(propietario, id, [])).rejects.toThrow('al menos una imagen')
       expect(almacen.subidas).toEqual([])
     })
 

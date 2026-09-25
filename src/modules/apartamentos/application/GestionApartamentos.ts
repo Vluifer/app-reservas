@@ -43,6 +43,19 @@ export class CambiarEstadoApartamento {
   }
 }
 
+/** Para la pantalla de administración. A quien no es su dueño le responde "no encontrado" para no revelar que existe. */
+export class ObtenerApartamentoParaGestion {
+  constructor(private readonly apartamentos: ApartamentoRepository) {}
+
+  async ejecutar(actor: Actor, apartamentoId: string): Promise<ApartamentoDTO> {
+    const apartamento = await this.apartamentos.buscarPorId(apartamentoId)
+    if (!apartamento || apartamento.estado === 'ELIMINADO' || !apartamento.puedeSerGestionadoPor(actor)) {
+      throw new NoEncontradoError('Apartamento no encontrado')
+    }
+    return aApartamentoDTO(apartamento)
+  }
+}
+
 export class ListarApartamentosDePropietario {
   constructor(private readonly apartamentos: ApartamentoRepository) {}
 

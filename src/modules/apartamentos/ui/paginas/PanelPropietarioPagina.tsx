@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { apartamentos, reservas } from '@/contenedor'
-import { requerirActor } from '@/modules/identidad/infrastructure/sesion'
+import { requerirActor } from '@/modules/identidad/ui/sesion'
 import { ROLES_ANFITRION } from '@/shared/domain/Actor'
 import { claseBoton, EstadoVacio, EtiquetaEstado, Tarjeta } from '@/shared/ui/componentes'
 import { formatoMoneda } from '@/shared/ui/formato'
@@ -14,7 +14,7 @@ export default async function PanelPropietarioPagina() {
     apartamentos.listarDePropietario.ejecutar(actor),
     reservas.listarDePropietario.ejecutar(actor),
   ])
-  const pendientes = misReservas.filter((r) => r.estado === 'PENDIENTE').length
+  const pendientes = misReservas.filter((r) => r.acciones.confirmar).length
 
   return (
     <div className="space-y-10">

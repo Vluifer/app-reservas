@@ -124,9 +124,85 @@ describe('Reserva', () => {
 
     it('impide transiciones no permitidas', () => {
       const reserva = solicitar()
-      reserva.rechazar()
+      reserva.rechazar(AHORA)
       expect(() => reserva.confirmar(AHORA)).toThrow(TransicionInvalidaError)
       expect(() => reserva.cancelar(AHORA)).toThrow('rechazada no puede pasar a cancelada')
+    })
+
+    it('una pendiente vencida ya no se puede confirmar, rechazar ni cancelar: solo expirar', () => {
+      const reserva = solicitar()
+      const vencida = new Date(AHORA.getTime() + (HORAS_PARA_CONFIRMAR + 1) * 3_600_000)
+
+      expect(reserva.estadoVigente(vencida)).toBe('EXPIRADA')
+      expect(reserva.accionesDisponibles(vencida)).toEqual({ confirmar: false, rechazar: false, cancelar: false })
+      expect(() => reserva.rechazar(vencida)).toThrow('venció')
+      expect(() => reserva.cancelar(vencida)).toThrow('venció')
+    })
+
+    it('una confirmada no se puede cancelar desde el día de llegada (hora de Bogotá)', () => {
+      const reserva = solicitar()
+      reserva.confirmar(AHORA)
+      const vispera = new Date('2030-01-20T04:59:00Z') // 19 de enero, 23:59 en Bogotá
+      const diaDeLlegada = new Date('2030-01-20T05:00:00Z') // 20 de enero, 00:00 en Bogotá
+
+      expect(reserva.accionesDisponibles(vispera).cancelar).toBe(true)
+      expect(reserva.accionesDisponibles(diaDeLlegada).cancelar).toBe(false)
+      expect(() => reserva.cancelar(diaDeLlegada)).toThrow('ya empezó')
+    })
+
+    it('las acciones disponibles coinciden con lo que la reserva acepta hacer', () => {
+      // Pendiente vigente / pendiente vencida o confirmada antes de llegar / estadía empezada
+      const momentos = [AHORA, new Date('2030-01-12T00:00:00Z'), new Date('2030-01-21T12:00:00Z')]
+      const estadosIniciales: ((r: Reserva) => void)[] = [() => {}, (r) => r.confirmar(AHORA), (r) => r.rechazar(AHORA)]
+
+      for (const preparar of estadosIniciales) {
+        const nueva = () => {
+          const r = solicitar()
+          preparar(r)
+          return r
+        }
+        const acepta = (accion: (r: Reserva) => void) => {
+          try {
+            accion(nueva())
+            return true
+          } catch {
+            return false
+          }
+        }
+        for (const ahora of momentos) {
+          expect(nueva().accionesDisponibles(ahora)).toEqual({
+            confirmar: acepta((r) => r.confirmar(ahora)),
+            rechazar: acepta((r) => r.rechazar(ahora)),
+            cancelar: acepta((r) => r.cancelar(ahora)),
+          })
+        }
+      }
+    })
+
+    it('una confirmada pasa a EN_CURSO el día de llegada y a COMPLETADA el de salida', () => {
+      const reserva = solicitar()
+      reserva.confirmar(AHORA)
+
+      reserva.avanzarEstadia(new Date('2030-01-19T12:00:00Z'))
+      expect(reserva.estado).toBe('CONFIRMADA')
+      reserva.avanzarEstadia(new Date('2030-01-20T12:00:00Z'))
+      expect(reserva.estado).toBe('EN_CURSO')
+      expect(reserva.ocupaFechas(new Date('2030-01-20T12:00:00Z'))).toBe(true)
+      reserva.avanzarEstadia(new Date('2030-01-23T12:00:00Z'))
+      expect(reserva.estado).toBe('COMPLETADA')
+    })
+
+    it('si la tarea no corrió durante la estadía, una confirmada pasa directo a COMPLETADA', () => {
+      const reserva = solicitar()
+      reserva.confirmar(AHORA)
+      reserva.avanzarEstadia(new Date('2030-02-01T12:00:00Z'))
+      expect(reserva.estado).toBe('COMPLETADA')
+    })
+
+    it('avanzar la estadía no afecta a reservas que no están confirmadas', () => {
+      const reserva = solicitar()
+      reserva.avanzarEstadia(new Date('2030-02-01T12:00:00Z'))
+      expect(reserva.estado).toBe('PENDIENTE')
     })
   })
 })

@@ -1,5 +1,5 @@
 import { reservas } from '@/contenedor'
-import { requerirActor } from '@/modules/identidad/infrastructure/sesion'
+import { requerirActor } from '@/modules/identidad/ui/sesion'
 import { ROLES_ANFITRION } from '@/shared/domain/Actor'
 import { BotonEnviar, BotonEnviarConfirmando } from '@/shared/ui/boton-enviar'
 import { EstadoVacio, EtiquetaEstado, MensajesDeRuta, RangoFechasTexto, Tarjeta } from '@/shared/ui/componentes'
@@ -61,21 +61,22 @@ export default async function ReservasRecibidasPagina({
                     <blockquote className="border-l-2 border-acento pl-4 text-sm italic text-tinta-suave">{r.notasCliente}</blockquote>
                   )}
 
-                  {(r.estado === 'PENDIENTE' || r.estado === 'CONFIRMADA') && (
+                  {/* Una solicitud se responde (confirmar/rechazar); una reserva ya aceptada solo se puede cancelar */}
+                  {(r.acciones.confirmar || r.acciones.rechazar || r.acciones.cancelar) && (
                     <div className="flex flex-wrap justify-end gap-2 border-t border-borde pt-4">
-                      {r.estado === 'PENDIENTE' && (
-                        <>
-                          <form action={rechazarReserva.bind(null, r.id)}>
-                            <BotonEnviarConfirmando variante="secundario" mensaje="¿Rechazar esta solicitud? No se puede deshacer.">
-                              Rechazar
-                            </BotonEnviarConfirmando>
-                          </form>
-                          <form action={confirmarReserva.bind(null, r.id)}>
-                            <BotonEnviar>Confirmar</BotonEnviar>
-                          </form>
-                        </>
+                      {r.acciones.rechazar && (
+                        <form action={rechazarReserva.bind(null, r.id)}>
+                          <BotonEnviarConfirmando variante="secundario" mensaje="¿Rechazar esta solicitud? No se puede deshacer.">
+                            Rechazar
+                          </BotonEnviarConfirmando>
+                        </form>
                       )}
-                      {r.estado === 'CONFIRMADA' && (
+                      {r.acciones.confirmar && (
+                        <form action={confirmarReserva.bind(null, r.id)}>
+                          <BotonEnviar>Confirmar</BotonEnviar>
+                        </form>
+                      )}
+                      {r.acciones.cancelar && !r.acciones.rechazar && (
                         <form action={cancelarReservaComoPropietario.bind(null, r.id)}>
                           <BotonEnviarConfirmando mensaje="¿Cancelar esta reserva confirmada? No se puede deshacer.">
                             Cancelar

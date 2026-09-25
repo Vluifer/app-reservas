@@ -25,6 +25,13 @@ export interface ApartamentoReservable {
   politicaCancelacion: PoliticaCancelacion
 }
 
+/** Acciones que admite la reserva en este momento (la interfaz las usa para no ofrecer botones que fallarían). */
+export interface AccionesReserva {
+  confirmar: boolean
+  rechazar: boolean
+  cancelar: boolean
+}
+
 export interface DatosCliente {
   id: string
   nombre: string
@@ -139,24 +146,61 @@ export class Reserva {
     return this.props.estado === 'PENDIENTE' && this.props.expiraEn !== null && this.props.expiraEn <= ahora
   }
 
+  /** El día de llegada ya llegó (según la zona horaria del negocio). */
+  estadiaEmpezada(ahora: Date): boolean {
+    return hoy(ahora) >= this.props.rango.inicio
+  }
+
+  estadiaTerminada(ahora: Date): boolean {
+    return hoy(ahora) >= this.props.rango.fin
+  }
+
   ocupaFechas(ahora: Date): boolean {
     return ESTADOS_QUE_OCUPAN.includes(this.props.estado) && !this.estaVencida(ahora)
   }
 
+  /**
+   * Estado que ve el usuario: una pendiente vencida ya es EXPIRADA en la práctica,
+   * aunque la tarea programada todavía no la haya marcado.
+   */
+  estadoVigente(ahora: Date): EstadoReserva {
+    return this.estaVencida(ahora) ? 'EXPIRADA' : this.props.estado
+  }
+
+  /** Lo que se puede hacer ahora mismo. Coincide con lo que aceptan confirmar(), rechazar() y cancelar(). */
+  accionesDisponibles(ahora: Date): AccionesReserva {
+    const pendienteVigente = this.props.estado === 'PENDIENTE' && !this.estaVencida(ahora)
+    return {
+      confirmar: pendienteVigente,
+      rechazar: pendienteVigente,
+      cancelar: pendienteVigente || (this.props.estado === 'CONFIRMADA' && !this.estadiaEmpezada(ahora)),
+    }
+  }
+
   confirmar(ahora: Date): void {
+    this.asegurarTransicion('CONFIRMADA')
     asegurar(!this.estaVencida(ahora), 'La solicitud ya venció y no puede confirmarse')
-    this.cambiarA('CONFIRMADA')
+    this.props.estado = 'CONFIRMADA'
     this.props.confirmadaEn = ahora
   }
 
-  rechazar(): void {
-    this.cambiarA('RECHAZADA')
+  rechazar(ahora: Date): void {
+    this.asegurarTransicion('RECHAZADA')
+    asegurar(!this.estaVencida(ahora), 'La solicitud ya venció y no puede rechazarse')
+    this.props.estado = 'RECHAZADA'
   }
 
-  /** Solo hay reembolso si la reserva estaba confirmada (una pendiente aún no se ha cobrado). */
+  /**
+   * Una pendiente se cancela sin costo (aún no se ha cobrado); una confirmada, solo antes del día
+   * de llegada y con el reembolso que marque la política.
+   */
   cancelar(ahora: Date): void {
+    this.asegurarTransicion('CANCELADA')
+    asegurar(!this.estaVencida(ahora), 'La solicitud ya venció y no puede cancelarse')
     const estabaConfirmada = this.props.estado === 'CONFIRMADA'
-    this.cambiarA('CANCELADA')
+    asegurar(!(estabaConfirmada && this.estadiaEmpezada(ahora)), 'La estadía ya empezó y no puede cancelarse')
+
+    this.props.estado = 'CANCELADA'
     this.props.canceladaEn = ahora
     this.props.montoReembolso = estabaConfirmada
       ? calcularReembolso(this.props.politicaCancelacion, this.props.precio.total, this.props.rango.inicio, ahora)
@@ -164,15 +208,27 @@ export class Reserva {
   }
 
   expirar(ahora: Date): void {
+    this.asegurarTransicion('EXPIRADA')
     asegurar(this.estaVencida(ahora), 'La reserva todavía no ha vencido')
-    this.cambiarA('EXPIRADA')
+    this.props.estado = 'EXPIRADA'
   }
 
-  private cambiarA(estado: EstadoReserva): void {
-    if (!puedeTransicionar(this.props.estado, estado)) {
-      throw new TransicionInvalidaError(this.props.estado, estado)
+  /** CONFIRMADA → EN_CURSO el día de llegada, y EN_CURSO → COMPLETADA el día de salida. */
+  avanzarEstadia(ahora: Date): void {
+    if (this.props.estado === 'CONFIRMADA' && this.estadiaEmpezada(ahora)) {
+      this.asegurarTransicion('EN_CURSO')
+      this.props.estado = 'EN_CURSO'
     }
-    this.props.estado = estado
+    if (this.props.estado === 'EN_CURSO' && this.estadiaTerminada(ahora)) {
+      this.asegurarTransicion('COMPLETADA')
+      this.props.estado = 'COMPLETADA'
+    }
+  }
+
+  private asegurarTransicion(hacia: EstadoReserva): void {
+    if (!puedeTransicionar(this.props.estado, hacia)) {
+      throw new TransicionInvalidaError(this.props.estado, hacia)
+    }
   }
 }
 

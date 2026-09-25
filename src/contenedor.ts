@@ -1,9 +1,12 @@
 /**
- * Raíz de composición: el ÚNICO lugar donde se conectan casos de uso con sus implementaciones reales.
- * La interfaz (src/app) importa desde aquí; los módulos nunca importan este archivo.
+ * Raíz de composición: el ÚNICO lugar donde se conectan los casos de uso con sus implementaciones reales.
+ *
+ * Lo importan las capas de entrada: la ui de los módulos (páginas y Server Actions), las rutas de src/app
+ * y las rutas de API. Nunca lo importan domain/, application/ ni infrastructure/ (lo verifica ESLint).
  */
 import { AutenticarUsuario } from '@/modules/identidad/application/AutenticarUsuario'
 import { RegistrarUsuario } from '@/modules/identidad/application/RegistrarUsuario'
+import { crearAutenticacion } from '@/modules/identidad/infrastructure/auth'
 import { BcryptPasswordHasher } from '@/modules/identidad/infrastructure/BcryptPasswordHasher'
 import { PrismaUsuarioRepository } from '@/modules/identidad/infrastructure/PrismaUsuarioRepository'
 
@@ -12,6 +15,7 @@ import {
   ActualizarApartamento,
   CambiarEstadoApartamento,
   ListarApartamentosDePropietario,
+  ObtenerApartamentoParaGestion,
   PublicarApartamento,
 } from '@/modules/apartamentos/application/GestionApartamentos'
 import { EliminarImagenApartamento, SubirImagenesApartamento } from '@/modules/apartamentos/application/ImagenesApartamento'
@@ -25,6 +29,7 @@ import {
   ObtenerReserva,
 } from '@/modules/reservas/application/ConsultasReservas'
 import {
+  AvanzarEstadias,
   CancelarReserva,
   ConfirmarReserva,
   ExpirarReservasPendientes,
@@ -48,9 +53,13 @@ export const identidad = {
   autenticarUsuario: new AutenticarUsuario(usuariosRepo, passwordHasher),
 }
 
+/** NextAuth: handlers de la ruta de API, auth() para leer la sesión, signIn/signOut para las Server Actions. */
+export const autenticacion = crearAutenticacion(identidad.autenticarUsuario)
+
 export const apartamentos = {
   buscar: new BuscarApartamentos(apartamentosRepo, reservasRepo),
   obtener: new ObtenerApartamento(apartamentosRepo),
+  obtenerParaGestion: new ObtenerApartamentoParaGestion(apartamentosRepo),
   publicar: new PublicarApartamento(apartamentosRepo),
   actualizar: new ActualizarApartamento(apartamentosRepo),
   cambiarEstado: new CambiarEstadoApartamento(apartamentosRepo),
@@ -70,4 +79,5 @@ export const reservas = {
   listarDePropietario: new ListarReservasDePropietario(reservasRepo),
   fechasOcupadas: new ConsultarFechasOcupadas(reservasRepo),
   expirarPendientes: new ExpirarReservasPendientes(reservasRepo),
+  avanzarEstadias: new AvanzarEstadias(reservasRepo),
 }

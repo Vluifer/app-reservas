@@ -1,7 +1,8 @@
 import { reservas } from '@/contenedor'
 
 /**
- * Tarea programada (p. ej. Vercel Cron cada hora).
+ * Tarea programada (p. ej. Vercel Cron cada hora): expira las solicitudes vencidas
+ * y avanza las estadías (CONFIRMADA → EN_CURSO → COMPLETADA).
  * Llamar con el header: Authorization: Bearer <CRON_SECRET>
  */
 export async function GET(request: Request) {
@@ -10,5 +11,6 @@ export async function GET(request: Request) {
     return Response.json({ error: 'No autorizado' }, { status: 401 })
   }
   const expiradas = await reservas.expirarPendientes.ejecutar()
-  return Response.json({ expiradas })
+  const estadiasAvanzadas = await reservas.avanzarEstadias.ejecutar()
+  return Response.json({ expiradas, estadiasAvanzadas })
 }

@@ -19,6 +19,10 @@ export class RelojFijo implements Reloj {
   avanzarHoras(horas: number) {
     this.fecha = new Date(this.fecha.getTime() + horas * 60 * 60 * 1000)
   }
+
+  irA(fecha: string | Date) {
+    this.fecha = new Date(fecha)
+  }
 }
 
 export const propietario: ActorIdentificado = {

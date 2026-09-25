@@ -2,7 +2,7 @@ import type { PoliticaCancelacion } from '@/shared/domain/PoliticaCancelacion'
 import { aTextoISO } from '@/shared/domain/RangoFechas'
 import type { DesglosePrecio } from '../domain/CalculadoraPrecio'
 import type { EstadoReserva } from '../domain/EstadoReserva'
-import type { Reserva } from '../domain/Reserva'
+import type { AccionesReserva, Reserva } from '../domain/Reserva'
 
 export interface DesglosePrecioDTO {
   noches: number
@@ -27,7 +27,10 @@ export interface ReservaDTO {
   numNinos: number
   precio: DesglosePrecioDTO
   politicaCancelacion: PoliticaCancelacion
+  /** Estado vigente: una pendiente vencida se muestra como EXPIRADA. */
   estado: EstadoReserva
+  /** Qué botones ofrecer. Lo calcula el dominio; la interfaz no repite reglas de estado. */
+  acciones: AccionesReserva
   notasCliente: string | null
   creadaEn: string
   expiraEn: string | null
@@ -45,7 +48,7 @@ export function aDesglosePrecioDTO(precio: DesglosePrecio): DesglosePrecioDTO {
   }
 }
 
-export function aReservaDTO(reserva: Reserva): ReservaDTO {
+export function aReservaDTO(reserva: Reserva, ahora: Date): ReservaDTO {
   const r = reserva.instantanea()
   return {
     id: r.id,
@@ -61,7 +64,8 @@ export function aReservaDTO(reserva: Reserva): ReservaDTO {
     numNinos: r.numNinos,
     precio: aDesglosePrecioDTO(r.precio),
     politicaCancelacion: r.politicaCancelacion,
-    estado: r.estado,
+    estado: reserva.estadoVigente(ahora),
+    acciones: reserva.accionesDisponibles(ahora),
     notasCliente: r.notasCliente,
     creadaEn: r.creadaEn.toISOString(),
     expiraEn: r.expiraEn?.toISOString() ?? null,

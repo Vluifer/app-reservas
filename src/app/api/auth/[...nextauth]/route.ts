@@ -1,3 +1,3 @@
-import { handlers } from '@/modules/identidad/infrastructure/auth'
+import { autenticacion } from '@/contenedor'
 
-export const { GET, POST } = handlers
+export const { GET, POST } = autenticacion.handlers

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { reservas } from '@/contenedor'
-import { requerirActor } from '@/modules/identidad/infrastructure/sesion'
+import { requerirActor } from '@/modules/identidad/ui/sesion'
 import { DESCRIPCION_POLITICA } from '@/shared/domain/PoliticaCancelacion'
 import { siNoExiste404 } from '@/shared/ui/acciones'
 import { BotonEnviarConfirmando } from '@/shared/ui/boton-enviar'
@@ -15,7 +15,6 @@ export default async function DetalleReservaPagina({ params, searchParams }: Pro
   const actor = await requerirActor()
   const [{ id }, mensajes] = await Promise.all([params, searchParams])
   const reserva = await reservas.obtener.ejecutar(actor, id).catch(siNoExiste404)
-  const cancelable = reserva.estado === 'PENDIENTE' || reserva.estado === 'CONFIRMADA'
 
   const datos = [
     ['Llegada', formatoFecha(reserva.llegada)],
@@ -73,7 +72,7 @@ export default async function DetalleReservaPagina({ params, searchParams }: Pro
         )}
       </Tarjeta>
 
-      {cancelable && (
+      {reserva.acciones.cancelar && (
         <Tarjeta tono="peligro" className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-semibold text-tinta">Cancelar reserva</h2>

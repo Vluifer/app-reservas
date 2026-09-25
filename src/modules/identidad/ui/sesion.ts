@@ -1,10 +1,10 @@
 import { redirect } from 'next/navigation'
+import { autenticacion } from '@/contenedor'
 import type { ActorIdentificado, Rol } from '@/shared/domain/Actor'
-import { auth } from './auth'
 
 /** Usuario de la sesión actual, o null si no ha iniciado sesión. */
 export async function obtenerActor(): Promise<ActorIdentificado | null> {
-  const sesion = await auth()
+  const sesion = await autenticacion.auth()
   if (!sesion?.user?.id) return null
   return {
     id: sesion.user.id,

@@ -106,6 +106,20 @@ export class PrismaReservaRepository implements ReservaRepository {
     return filas.map(aDominio)
   }
 
+  async listarEstadiasPorAvanzar(ahora: Date) {
+    const dia = hoy(ahora)
+    const filas = await this.db.reserva.findMany({
+      where: {
+        OR: [
+          { estado: 'CONFIRMADA', fechaInicio: { lte: dia } },
+          { estado: 'EN_CURSO', fechaFin: { lte: dia } },
+        ],
+      },
+      include: CON_APARTAMENTO,
+    })
+    return filas.map(aDominio)
+  }
+
   async fechasOcupadas(apartamentoId: string, ahora: Date) {
     const filas = await this.db.reserva.findMany({
       where: { apartamentoId, fechaFin: { gt: hoy(ahora) }, AND: [ocupaFechas(ahora)] },

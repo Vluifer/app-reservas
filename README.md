@@ -26,7 +26,7 @@ npm run dev                 # http://localhost:3000
 ```
 src/
 ├─ app/                  Rutas de Next.js. Solo archivos de 1 línea que apuntan a una página del módulo.
-├─ contenedor.ts         Conecta los casos de uso con sus implementaciones reales (Prisma, Cloudinary…).
+├─ contenedor.ts         Conecta los casos de uso con sus implementaciones reales (Prisma, Cloudinary, NextAuth…).
 ├─ modules/
 │  ├─ identidad/         Usuarios, registro, login, sesión
 │  ├─ apartamentos/      Catálogo: publicar, editar, buscar, imágenes
@@ -34,7 +34,7 @@ src/
 └─ shared/
    ├─ domain/            Piezas de negocio comunes: Dinero, RangoFechas, Actor, errores
    ├─ infrastructure/    Cliente de Prisma
-   └─ ui/                Botones, campos, navbar y helpers de formularios
+   └─ ui/                Botones, campos y helpers de formularios (sin depender de ningún módulo)
 ```
 
 Cada módulo tiene siempre las mismas 4 carpetas:
@@ -61,13 +61,16 @@ modules/reservas/
 ### Dependencias permitidas
 
 ```
-ui  ──►  application  ──►  domain  ◄──  infrastructure
-                                   (implementa los puertos)
+ui  ──►  contenedor.ts  ──►  application  ──►  domain  ◄──  infrastructure
+                                                               (implementa los puertos)
 ```
 
 - `domain/` **no importa nada** de las otras capas ni de librerías externas.
 - `application/` solo conoce el dominio y los puertos (interfaces), nunca Prisma.
-- `contenedor.ts` es el único lugar donde se decide "el repositorio real es Prisma".
+- `contenedor.ts` es el único lugar donde se decide "el repositorio real es Prisma". Lo usan solo las capas de entrada: la `ui/` de los módulos (páginas y Server Actions) y las rutas de `src/app`.
+- `ui/` no importa `infrastructure/`: llega a los casos de uso a través del contenedor. La sesión (`identidad/ui/sesion.ts`) y la navbar viven en la `ui` de identidad.
+- `shared/` no depende de ningún módulo.
+- Estas reglas las verifica ESLint (`no-restricted-imports` en `eslint.config.mjs`): `npm run lint` falla si se rompen.
 - Un módulo no usa el modelo interno de otro. Ejemplo: `reservas` consulta apartamentos a través de `CatalogoApartamentosDesdeRepositorio` (capa anticorrupción).
 
 ### ¿Dónde pongo…?
@@ -96,8 +99,9 @@ Los errores de negocio (`ErrorDeDominio`) se muestran al usuario; cualquier otro
 
 - **Sin dobles reservas:** la creación bloquea la fila del apartamento (`SELECT … FOR UPDATE`) dentro de una transacción. Hay una prueba de integración que lanza 8 reservas simultáneas y verifica que solo entra una.
 - **Precio calculado en el servidor:** noches + limpieza + 10% de servicio + 19% de impuestos.
-- **Ciclo de vida:** `PENDIENTE → CONFIRMADA | RECHAZADA | CANCELADA | EXPIRADA`, `CONFIRMADA → CANCELADA | EN_CURSO → COMPLETADA`.
-- **Solicitudes con vencimiento:** el propietario tiene 24 h para confirmar. Las vencidas dejan de bloquear fechas de inmediato y la tarea `GET /api/cron/expirar-reservas` (header `Authorization: Bearer $CRON_SECRET`) las marca como `EXPIRADA`.
+- **Ciclo de vida:** `PENDIENTE → CONFIRMADA | RECHAZADA | CANCELADA | EXPIRADA`, `CONFIRMADA → CANCELADA | EN_CURSO → COMPLETADA`. La entidad `Reserva` calcula qué acciones admite en cada momento (`accionesDisponibles`) y la interfaz solo muestra esos botones.
+- **Cancelación:** una pendiente se cancela sin costo; una confirmada solo antes del día de llegada (hora de Bogotá). Una vez empezada la estadía ya no se puede cancelar.
+- **Tarea programada** `GET /api/cron/expirar-reservas` (header `Authorization: Bearer $CRON_SECRET`): marca como `EXPIRADA` las solicitudes que nadie confirmó en 24 h y avanza las estadías (`CONFIRMADA → EN_CURSO` el día de llegada, `→ COMPLETADA` el de salida). Las vencidas dejan de bloquear fechas y se muestran como expiradas de inmediato, aunque la tarea no haya corrido.
 - **Política de cancelación** por apartamento: flexible (100% hasta 24 h antes), moderada (50% hasta 5 días antes), estricta (sin reembolso).
 - **Seguridad:** el rol ADMIN no se puede elegir al registrarse; cada caso de uso verifica permisos con el `Actor` de la sesión; los errores de login no revelan si el email existe.
 

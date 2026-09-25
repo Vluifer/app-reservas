@@ -14,23 +14,28 @@ export class ConfirmarReserva {
   ) {}
 
   async ejecutar(actor: Actor, reservaId: string): Promise<ReservaDTO> {
+    const ahora = this.reloj.ahora()
     const reserva = await cargarReserva(this.reservas, reservaId, actor)
     if (!reserva.puedeSerGestionadaPor(actor)) throw new NoAutorizadoError('Solo el propietario puede confirmar la reserva')
-    reserva.confirmar(this.reloj.ahora())
+    reserva.confirmar(ahora)
     await this.reservas.guardar(reserva)
-    return aReservaDTO(reserva)
+    return aReservaDTO(reserva, ahora)
   }
 }
 
 export class RechazarReserva {
-  constructor(private readonly reservas: ReservaRepository) {}
+  constructor(
+    private readonly reservas: ReservaRepository,
+    private readonly reloj: Reloj = relojDelSistema,
+  ) {}
 
   async ejecutar(actor: Actor, reservaId: string): Promise<ReservaDTO> {
+    const ahora = this.reloj.ahora()
     const reserva = await cargarReserva(this.reservas, reservaId, actor)
     if (!reserva.puedeSerGestionadaPor(actor)) throw new NoAutorizadoError('Solo el propietario puede rechazar la reserva')
-    reserva.rechazar()
+    reserva.rechazar(ahora)
     await this.reservas.guardar(reserva)
-    return aReservaDTO(reserva)
+    return aReservaDTO(reserva, ahora)
   }
 }
 
@@ -42,10 +47,11 @@ export class CancelarReserva {
   ) {}
 
   async ejecutar(actor: Actor, reservaId: string): Promise<ReservaDTO> {
+    const ahora = this.reloj.ahora()
     const reserva = await cargarReserva(this.reservas, reservaId, actor)
-    reserva.cancelar(this.reloj.ahora())
+    reserva.cancelar(ahora)
     await this.reservas.guardar(reserva)
-    return aReservaDTO(reserva)
+    return aReservaDTO(reserva, ahora)
   }
 }
 
@@ -64,6 +70,24 @@ export class ExpirarReservasPendientes {
       await this.reservas.guardar(reserva)
     }
     return vencidas.length
+  }
+}
+
+/** Tarea programada: pasa las reservas confirmadas a EN_CURSO al llegar el huésped y a COMPLETADA al salir. */
+export class AvanzarEstadias {
+  constructor(
+    private readonly reservas: ReservaRepository,
+    private readonly reloj: Reloj = relojDelSistema,
+  ) {}
+
+  async ejecutar(): Promise<number> {
+    const ahora = this.reloj.ahora()
+    const porAvanzar = await this.reservas.listarEstadiasPorAvanzar(ahora)
+    for (const reserva of porAvanzar) {
+      reserva.avanzarEstadia(ahora)
+      await this.reservas.guardar(reserva)
+    }
+    return porAvanzar.length
   }
 }
 

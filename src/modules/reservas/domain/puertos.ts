@@ -17,6 +17,8 @@ export interface ReservaRepository {
   listarPorCliente(clienteId: string): Promise<Reserva[]>
   listarPorPropietario(propietarioId: string): Promise<Reserva[]>
   listarPendientesVencidas(ahora: Date): Promise<Reserva[]>
+  /** CONFIRMADAS cuyo día de llegada ya llegó y EN_CURSO cuyo día de salida ya llegó. */
+  listarEstadiasPorAvanzar(ahora: Date): Promise<Reserva[]>
   /** Rangos ocupados de un apartamento desde hoy en adelante. */
   fechasOcupadas(apartamentoId: string, ahora: Date): Promise<RangoFechas[]>
   apartamentosOcupados(rango: RangoFechas, ahora: Date): Promise<string[]>

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { claseEnlace } from '@/shared/ui/componentes'
-import { obtenerActor } from '../../infrastructure/sesion'
+import { obtenerActor } from '../sesion'
 import { FormularioLogin } from '../componentes/formulario-login'
 
 export default async function LoginPagina({ searchParams }: { searchParams: Promise<{ volverA?: string }> }) {

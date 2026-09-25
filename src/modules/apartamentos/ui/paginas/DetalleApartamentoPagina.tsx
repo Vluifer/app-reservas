@@ -1,5 +1,5 @@
 import { apartamentos } from '@/contenedor'
-import { obtenerActor } from '@/modules/identidad/infrastructure/sesion'
+import { obtenerActor } from '@/modules/identidad/ui/sesion'
 import { FechasOcupadas } from '@/modules/reservas/ui/componentes/fechas-ocupadas'
 import { PanelReserva, type ConsultaReserva } from '@/modules/reservas/ui/componentes/panel-reserva'
 import { DESCRIPCION_POLITICA } from '@/shared/domain/PoliticaCancelacion'

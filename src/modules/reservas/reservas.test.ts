@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { apartamentoReservable, admin, cliente, otroCliente, propietario, RelojFijo } from '../../../tests/fabricas'
 import { NoAutorizadoError, NoEncontradoError } from '@/shared/domain/errores'
-import { ConsultarFechasOcupadas, ListarReservasDePropietario, ObtenerReserva } from './application/ConsultasReservas'
 import {
+  ConsultarFechasOcupadas,
+  ListarReservasDeCliente,
+  ListarReservasDePropietario,
+  ObtenerReserva,
+} from './application/ConsultasReservas'
+import {
+  AvanzarEstadias,
   CancelarReserva,
   ConfirmarReserva,
   ExpirarReservasPendientes,
@@ -83,6 +89,24 @@ describe('Módulo reservas', () => {
       await expect(cotizar.ejecutar({ ...consulta, numAdultos: 3, numNinos: 1 })).resolves.toMatchObject({ disponible: true })
     })
 
+    it('la cotización rechaza fechas inválidas y apartamentos inexistentes', async () => {
+      const cotizar = new CotizarReserva(repo, catalogo, reloj)
+      const consulta = (cambios: object) => ({
+        apartamentoId: 'apto-1',
+        llegada: '2030-01-20',
+        salida: '2030-01-23',
+        numAdultos: 2,
+        numNinos: 0,
+        ...cambios,
+      })
+
+      await expect(cotizar.ejecutar(consulta({ llegada: '2030-01-05' }))).rejects.toThrow('pasado')
+      await expect(cotizar.ejecutar(consulta({ salida: '2030-01-20' }))).rejects.toThrow('posterior a la de llegada')
+      await expect(cotizar.ejecutar(consulta({ salida: '2030-04-21' }))).rejects.toThrow('máxima es de 90 noches')
+      await expect(cotizar.ejecutar(consulta({ llegada: '2030-02-30' }))).rejects.toThrow('Fecha inválida')
+      await expect(cotizar.ejecutar(consulta({ apartamentoId: 'no-existe' }))).rejects.toThrow(NoEncontradoError)
+    })
+
     it('falla si el apartamento no existe o no está activo', async () => {
       await expect(crear.ejecutar(cliente, solicitud({ apartamentoId: 'no-existe' }))).rejects.toThrow(NoEncontradoError)
 
@@ -109,7 +133,7 @@ describe('Módulo reservas', () => {
       expect((await confirmar.ejecutar(propietario, id)).estado).toBe('CONFIRMADA')
 
       const otra = await crear.ejecutar(otroCliente, solicitud({ llegada: '2030-02-01', salida: '2030-02-03' }))
-      expect((await new RechazarReserva(repo).ejecutar(admin, otra.id)).estado).toBe('RECHAZADA')
+      expect((await new RechazarReserva(repo, reloj).ejecutar(admin, otra.id)).estado).toBe('RECHAZADA')
     })
 
     it('el cliente cancela y recibe el reembolso según la política', async () => {
@@ -118,6 +142,40 @@ describe('Módulo reservas', () => {
 
       const cancelada = await new CancelarReserva(repo, reloj).ejecutar(cliente, id)
       expect(cancelada).toMatchObject({ estado: 'CANCELADA', montoReembolso: 452.2 })
+    })
+
+    it('el propietario también puede cancelar una reserva confirmada, con el mismo reembolso', async () => {
+      const { id } = await crear.ejecutar(cliente, solicitud())
+      await new ConfirmarReserva(repo, reloj).ejecutar(propietario, id)
+
+      const cancelada = await new CancelarReserva(repo, reloj).ejecutar(propietario, id)
+      expect(cancelada).toMatchObject({ estado: 'CANCELADA', montoReembolso: 452.2 })
+    })
+
+    it('no se puede cancelar una reserva cuya estadía ya empezó', async () => {
+      const { id } = await crear.ejecutar(cliente, solicitud())
+      await new ConfirmarReserva(repo, reloj).ejecutar(propietario, id)
+
+      reloj.irA('2030-01-21T15:00:00Z')
+      await expect(new CancelarReserva(repo, reloj).ejecutar(cliente, id)).rejects.toThrow('ya empezó')
+      expect((await repo.buscarPorId(id))?.estado).toBe('CONFIRMADA')
+    })
+
+    it('los listados dicen qué acciones ofrecer y muestran las vencidas como expiradas', async () => {
+      const { id } = await crear.ejecutar(cliente, solicitud())
+      const listar = new ListarReservasDePropietario(repo, reloj)
+
+      expect((await listar.ejecutar(propietario))[0]).toMatchObject({
+        estado: 'PENDIENTE',
+        acciones: { confirmar: true, rechazar: true, cancelar: true },
+      })
+
+      reloj.avanzarHoras(25)
+      expect((await listar.ejecutar(propietario))[0]).toMatchObject({
+        estado: 'EXPIRADA',
+        acciones: { confirmar: false, rechazar: false, cancelar: false },
+      })
+      await expect(new ConfirmarReserva(repo, reloj).ejecutar(propietario, id)).rejects.toThrow('venció')
     })
 
     it('una reserva cancelada libera las fechas', async () => {
@@ -129,15 +187,41 @@ describe('Módulo reservas', () => {
     it('otro cliente no puede ver ni cancelar una reserva ajena', async () => {
       const { id } = await crear.ejecutar(cliente, solicitud())
 
-      await expect(new ObtenerReserva(repo).ejecutar(otroCliente, id)).rejects.toThrow(NoEncontradoError)
+      await expect(new ObtenerReserva(repo, reloj).ejecutar(otroCliente, id)).rejects.toThrow(NoEncontradoError)
       await expect(new CancelarReserva(repo, reloj).ejecutar(otroCliente, id)).rejects.toThrow(NoEncontradoError)
-      expect((await new ObtenerReserva(repo).ejecutar(propietario, id)).id).toBe(id)
+      expect((await new ObtenerReserva(repo, reloj).ejecutar(propietario, id)).id).toBe(id)
     })
 
     it('el propietario ve las reservas de sus apartamentos', async () => {
       await crear.ejecutar(cliente, solicitud())
-      expect(await new ListarReservasDePropietario(repo).ejecutar(propietario)).toHaveLength(1)
-      expect(await new ListarReservasDePropietario(repo).ejecutar(admin)).toHaveLength(0)
+      expect(await new ListarReservasDePropietario(repo, reloj).ejecutar(propietario)).toHaveLength(1)
+      expect(await new ListarReservasDePropietario(repo, reloj).ejecutar(admin)).toHaveLength(0)
+    })
+
+    it('el huésped solo ve sus propias reservas', async () => {
+      const mia = await crear.ejecutar(cliente, solicitud())
+      const ajena = await crear.ejecutar(otroCliente, solicitud({ llegada: '2030-02-01', salida: '2030-02-03' }))
+      const listar = new ListarReservasDeCliente(repo, reloj)
+
+      expect((await listar.ejecutar(cliente)).map((r) => r.id)).toEqual([mia.id])
+      expect((await listar.ejecutar(otroCliente)).map((r) => r.id)).toEqual([ajena.id])
+      expect(await listar.ejecutar(propietario)).toEqual([])
+    })
+
+    it('la tarea programada avanza las estadías confirmadas', async () => {
+      const { id } = await crear.ejecutar(cliente, solicitud())
+      await new ConfirmarReserva(repo, reloj).ejecutar(propietario, id)
+      const avanzar = new AvanzarEstadias(repo, reloj)
+
+      expect(await avanzar.ejecutar()).toBe(0)
+      reloj.irA('2030-01-20T15:00:00Z')
+      expect(await avanzar.ejecutar()).toBe(1)
+      expect((await repo.buscarPorId(id))?.estado).toBe('EN_CURSO')
+
+      reloj.irA('2030-01-23T15:00:00Z')
+      expect(await avanzar.ejecutar()).toBe(1)
+      expect((await repo.buscarPorId(id))?.estado).toBe('COMPLETADA')
+      expect(await avanzar.ejecutar()).toBe(0)
     })
 
     it('la tarea programada expira solo las solicitudes vencidas', async () => {

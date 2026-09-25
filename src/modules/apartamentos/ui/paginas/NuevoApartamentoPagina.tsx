@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { requerirActor } from '@/modules/identidad/infrastructure/sesion'
+import { requerirActor } from '@/modules/identidad/ui/sesion'
 import { ROLES_ANFITRION } from '@/shared/domain/Actor'
 import { claseEnlaceVolver, Tarjeta } from '@/shared/ui/componentes'
 import { publicarApartamento } from '../acciones'

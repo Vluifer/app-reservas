@@ -6,7 +6,7 @@ import { Apartamento } from '@/modules/apartamentos/domain/Apartamento'
 import { PrismaApartamentoRepository } from '@/modules/apartamentos/infrastructure/PrismaApartamentoRepository'
 import type { ActorIdentificado } from '@/shared/domain/Actor'
 import { RangoFechas } from '@/shared/domain/RangoFechas'
-import { CancelarReserva, ConfirmarReserva } from '../application/GestionReservas'
+import { AvanzarEstadias, CancelarReserva, ConfirmarReserva } from '../application/GestionReservas'
 import { CrearReserva, type CrearReservaInput } from '../application/SolicitudReserva'
 import { FechasNoDisponiblesError } from '../domain/errores'
 import { CatalogoApartamentosDesdeRepositorio } from './CatalogoApartamentosDesdeRepositorio'
@@ -102,5 +102,22 @@ describe('PrismaReservaRepository (PostgreSQL real)', () => {
     expect(await repo.listarPorCliente(cliente.id)).toHaveLength(1)
     expect(await repo.listarPorPropietario(propietario.id)).toHaveLength(1)
     expect(await repo.listarPorPropietario(cliente.id)).toHaveLength(0)
+  })
+
+  it('lista las estadías por avanzar según el día de llegada y de salida (hora de Bogotá)', async () => {
+    const { id } = await crear.ejecutar(cliente, solicitud())
+    await new ConfirmarReserva(repo, reloj).ejecutar(propietario, id)
+    const vispera = new Date('2030-01-20T04:59:00Z') // 19 de enero, 23:59 en Bogotá
+    const llegada = new Date('2030-01-20T15:00:00Z')
+    const salida = new Date('2030-01-23T15:00:00Z')
+
+    expect(await repo.listarEstadiasPorAvanzar(vispera)).toEqual([])
+    expect((await repo.listarEstadiasPorAvanzar(llegada)).map((r) => r.id)).toEqual([id])
+
+    await new AvanzarEstadias(repo, new RelojFijo(llegada)).ejecutar()
+    expect((await bd.reserva.findUniqueOrThrow({ where: { id } })).estado).toBe('EN_CURSO')
+    expect(await repo.listarEstadiasPorAvanzar(llegada)).toEqual([])
+    expect(await repo.hayConflicto(apartamentoId, RangoFechas.crear('2030-01-21', '2030-01-22'), llegada)).toBe(true)
+    expect((await repo.listarEstadiasPorAvanzar(salida)).map((r) => r.id)).toEqual([id])
   })
 })

@@ -61,6 +61,7 @@ export class CrearReserva {
 
   async ejecutar(cliente: ActorIdentificado, input: CrearReservaInput): Promise<ReservaDTO> {
     const apartamento = await cargarReservable(this.catalogo, input.apartamentoId)
+    const ahora = this.reloj.ahora()
     const reserva = Reserva.solicitar(
       {
         apartamento,
@@ -70,10 +71,10 @@ export class CrearReserva {
         numNinos: input.numNinos,
         notas: input.notas,
       },
-      this.reloj.ahora(),
+      ahora,
     )
     await this.reservas.crearSiHayDisponibilidad(reserva)
-    return aReservaDTO(reserva)
+    return aReservaDTO(reserva, ahora)
   }
 }
 

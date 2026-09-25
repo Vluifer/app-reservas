@@ -6,26 +6,37 @@ import { cargarReserva } from './GestionReservas'
 import { aReservaDTO, type ReservaDTO } from './ReservaDTO'
 
 export class ObtenerReserva {
-  constructor(private readonly reservas: ReservaRepository) {}
+  constructor(
+    private readonly reservas: ReservaRepository,
+    private readonly reloj: Reloj = relojDelSistema,
+  ) {}
 
   async ejecutar(actor: Actor, reservaId: string): Promise<ReservaDTO> {
-    return aReservaDTO(await cargarReserva(this.reservas, reservaId, actor))
+    return aReservaDTO(await cargarReserva(this.reservas, reservaId, actor), this.reloj.ahora())
   }
 }
 
 export class ListarReservasDeCliente {
-  constructor(private readonly reservas: ReservaRepository) {}
+  constructor(
+    private readonly reservas: ReservaRepository,
+    private readonly reloj: Reloj = relojDelSistema,
+  ) {}
 
   async ejecutar(actor: Actor): Promise<ReservaDTO[]> {
-    return (await this.reservas.listarPorCliente(actor.id)).map(aReservaDTO)
+    const ahora = this.reloj.ahora()
+    return (await this.reservas.listarPorCliente(actor.id)).map((r) => aReservaDTO(r, ahora))
   }
 }
 
 export class ListarReservasDePropietario {
-  constructor(private readonly reservas: ReservaRepository) {}
+  constructor(
+    private readonly reservas: ReservaRepository,
+    private readonly reloj: Reloj = relojDelSistema,
+  ) {}
 
   async ejecutar(actor: Actor): Promise<ReservaDTO[]> {
-    return (await this.reservas.listarPorPropietario(actor.id)).map(aReservaDTO)
+    const ahora = this.reloj.ahora()
+    return (await this.reservas.listarPorPropietario(actor.id)).map((r) => aReservaDTO(r, ahora))
   }
 }
 

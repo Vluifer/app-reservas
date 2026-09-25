@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { reservas } from '@/contenedor'
-import { requerirActor } from '@/modules/identidad/infrastructure/sesion'
+import { requerirActor } from '@/modules/identidad/ui/sesion'
 import { claseBoton, EstadoVacio, EtiquetaEstado, RangoFechasTexto, Tarjeta } from '@/shared/ui/componentes'
 import { formatoFecha, formatoMoneda } from '@/shared/ui/formato'
 
