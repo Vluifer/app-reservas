@@ -98,6 +98,7 @@ Los errores de negocio (`ErrorDeDominio`) se muestran al usuario; cualquier otro
 ## Reglas de negocio implementadas
 
 - **Sin dobles reservas:** la creación bloquea la fila del apartamento (`SELECT … FOR UPDATE`) dentro de una transacción. Hay una prueba de integración que lanza 8 reservas simultáneas y verifica que solo entra una.
+- **Sin cambios que se pisen (bloqueo optimista):** `Apartamento` y `Reserva` tienen una columna `version`. Cada guardado hace `UPDATE … WHERE version = <la leída>` y la incrementa; si otra petición guardó antes, se rechaza con `ConflictoDeConcurrenciaError` y el usuario ve "Recarga la página e inténtalo de nuevo". Así, por ejemplo, una confirmación y una cancelación simultáneas no pueden aplicarse las dos, ni dos subidas de imágenes a la vez superar el límite. La versión la lleva el repositorio (`shared/infrastructure/versiones.ts`), no el dominio.
 - **Precio calculado en el servidor:** noches + limpieza + 10% de servicio + 19% de impuestos.
 - **Ciclo de vida:** `PENDIENTE → CONFIRMADA | RECHAZADA | CANCELADA | EXPIRADA`, `CONFIRMADA → CANCELADA | EN_CURSO → COMPLETADA`. La entidad `Reserva` calcula qué acciones admite en cada momento (`accionesDisponibles`) y la interfaz solo muestra esos botones.
 - **Cancelación:** una pendiente se cancela sin costo; una confirmada solo antes del día de llegada (hora de Bogotá). Una vez empezada la estadía ya no se puede cancelar.

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { AHORA, admin, cliente, datosApartamento, otroPropietario, propietario, RelojFijo } from '../../../tests/fabricas'
-import { NoAutorizadoError, NoEncontradoError } from '@/shared/domain/errores'
+import { ConflictoDeConcurrenciaError, NoAutorizadoError, NoEncontradoError } from '@/shared/domain/errores'
 import { BuscarApartamentos, ObtenerApartamento } from './application/ConsultasApartamentos'
 import {
   ActualizarApartamento,
@@ -152,6 +152,23 @@ describe('Módulo apartamentos', () => {
       await expect(subir.ejecutar(propietario, id, varias(2, 'c'))).rejects.toThrow('máximo 10 imágenes')
       expect(almacen.subidas).toHaveLength(9)
       expect((await subir.ejecutar(propietario, id, varias(1, 'd'))).imagenes).toHaveLength(10)
+    })
+
+    it('dos subidas simultáneas no superan el límite ni dejan imágenes huérfanas en el almacén', async () => {
+      const { id } = await publicar.ejecutar(propietario, datosApartamento())
+      const subir = new SubirImagenesApartamento(repo, almacen)
+      await subir.ejecutar(propietario, id, Array.from({ length: 9 }, (_, i) => imagen(`base${i}.jpg`)))
+
+      // Las dos leen el apartamento con 9 imágenes: cada una, por separado, cabría
+      const resultados = await Promise.allSettled([
+        subir.ejecutar(propietario, id, [imagen('primera.jpg')]),
+        subir.ejecutar(propietario, id, [imagen('segunda.jpg')]),
+      ])
+
+      expect(resultados.map((r) => r.status)).toEqual(['fulfilled', 'rejected'])
+      expect(resultados[1]).toMatchObject({ reason: expect.any(ConflictoDeConcurrenciaError) })
+      expect((await repo.buscarPorId(id))?.imagenes).toHaveLength(10)
+      expect(almacen.eliminadas).toEqual([`apartamentos/${id}/segunda.jpg`])
     })
 
     it('rechaza imágenes de más de 5 MB y la subida vacía', async () => {

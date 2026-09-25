@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { apartamentoReservable, admin, cliente, otroCliente, propietario, RelojFijo } from '../../../tests/fabricas'
-import { NoAutorizadoError, NoEncontradoError } from '@/shared/domain/errores'
+import { ConflictoDeConcurrenciaError, NoAutorizadoError, NoEncontradoError } from '@/shared/domain/errores'
 import {
   ConsultarFechasOcupadas,
   ListarReservasDeCliente,
@@ -222,6 +222,20 @@ describe('Módulo reservas', () => {
       expect(await avanzar.ejecutar()).toBe(1)
       expect((await repo.buscarPorId(id))?.estado).toBe('COMPLETADA')
       expect(await avanzar.ejecutar()).toBe(0)
+    })
+
+    it('si el propietario confirma y el huésped cancela a la vez, solo se guarda uno de los dos cambios', async () => {
+      const { id } = await crear.ejecutar(cliente, solicitud())
+
+      // Ambos casos de uso leen la reserva PENDIENTE antes de que cualquiera guarde
+      const [confirmada, cancelada] = await Promise.allSettled([
+        new ConfirmarReserva(repo, reloj).ejecutar(propietario, id),
+        new CancelarReserva(repo, reloj).ejecutar(cliente, id),
+      ])
+
+      expect(confirmada).toMatchObject({ status: 'fulfilled', value: { estado: 'CONFIRMADA' } })
+      expect(cancelada).toMatchObject({ status: 'rejected', reason: expect.any(ConflictoDeConcurrenciaError) })
+      expect((await repo.buscarPorId(id))?.estado).toBe('CONFIRMADA')
     })
 
     it('la tarea programada expira solo las solicitudes vencidas', async () => {

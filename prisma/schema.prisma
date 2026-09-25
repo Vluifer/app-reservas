@@ -43,6 +43,9 @@ model Apartamento {
   politicaCancelacion PoliticaCancelacion @default(FLEXIBLE)
   estadoApartamento   EstadoApartamento   @default(ACTIVO)
 
+  // Bloqueo optimista: cada guardado la incrementa y falla si otro la cambió antes
+  version Int @default(0)
+
   propietarioId String
   propietario   Usuario   @relation(fields: [propietarioId], references: [id], onDelete: Restrict)
   imagenes      Imagen[]
@@ -90,6 +93,9 @@ model Reserva {
   estado              EstadoReserva       @default(PENDIENTE)
   politicaCancelacion PoliticaCancelacion
   montoReembolso      Decimal?            @db.Decimal(10, 2)
+
+  // Bloqueo optimista: cada guardado la incrementa y falla si otro la cambió antes
+  version Int @default(0)
 
   // Copia de los datos del cliente al momento de reservar (historial)
   clienteNombre   String

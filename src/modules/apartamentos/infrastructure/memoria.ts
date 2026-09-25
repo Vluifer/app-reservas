@@ -1,19 +1,36 @@
 import { crearPagina } from '@/shared/domain/comunes'
+import { ConflictoDeConcurrenciaError } from '@/shared/domain/errores'
+import { RegistroDeVersiones } from '@/shared/infrastructure/versiones'
 import { Apartamento, type ApartamentoProps } from '../domain/Apartamento'
 import type { AlmacenImagenes, ApartamentoRepository, ArchivoImagen, CriteriosBusqueda } from '../domain/puertos'
 
-/** Implementaciones en memoria para pruebas unitarias (sin base de datos ni Cloudinary). */
+/** Implementaciones en memoria para pruebas unitarias (sin base de datos ni Cloudinary). Mismo bloqueo optimista que Prisma. */
 
 export class EnMemoriaApartamentoRepository implements ApartamentoRepository {
   private readonly registros = new Map<string, ApartamentoProps>()
+  private readonly versionesGuardadas = new Map<string, number>()
+  private readonly versiones = new RegistroDeVersiones<Apartamento>()
+
+  private cargar(props: ApartamentoProps): Apartamento {
+    return this.versiones.anotar(Apartamento.reconstruir(props), this.versionesGuardadas.get(props.id) ?? 0)
+  }
 
   async buscarPorId(id: string) {
     const props = this.registros.get(id)
-    return props ? Apartamento.reconstruir(props) : null
+    return props ? this.cargar(props) : null
   }
 
   async guardar(apartamento: Apartamento) {
+    const version = this.versiones.versionDe(apartamento)
+    if (version === undefined) {
+      if (this.registros.has(apartamento.id)) throw new Error(`El apartamento ${apartamento.id} ya existe`)
+    } else if (this.versionesGuardadas.get(apartamento.id) !== version) {
+      throw new ConflictoDeConcurrenciaError()
+    }
+    const nueva = version === undefined ? 0 : version + 1
     this.registros.set(apartamento.id, apartamento.instantanea())
+    this.versionesGuardadas.set(apartamento.id, nueva)
+    this.versiones.anotar(apartamento, nueva)
   }
 
   async buscarActivos(criterios: CriteriosBusqueda) {
@@ -26,14 +43,14 @@ export class EnMemoriaApartamentoRepository implements ApartamentoRepository {
       .sort((a, b) => b.creadoEn.getTime() - a.creadoEn.getTime())
 
     const inicio = (criterios.pagina - 1) * criterios.porPagina
-    const items = coincidencias.slice(inicio, inicio + criterios.porPagina).map((p) => Apartamento.reconstruir(p))
+    const items = coincidencias.slice(inicio, inicio + criterios.porPagina).map((p) => this.cargar(p))
     return crearPagina(items, coincidencias.length, criterios.pagina, criterios.porPagina)
   }
 
   async listarPorPropietario(propietarioId: string) {
     return [...this.registros.values()]
       .filter((a) => a.propietarioId === propietarioId && a.estado !== 'ELIMINADO')
-      .map((p) => Apartamento.reconstruir(p))
+      .map((p) => this.cargar(p))
   }
 }
 

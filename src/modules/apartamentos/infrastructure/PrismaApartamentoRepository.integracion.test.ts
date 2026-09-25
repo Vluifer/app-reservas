@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { AHORA, datosApartamento } from '../../../../tests/fabricas'
 import { bd, crearUsuario, limpiarBaseDeDatos } from '../../../../tests/integracion/bd'
 import { Dinero } from '@/shared/domain/Dinero'
+import { ConflictoDeConcurrenciaError } from '@/shared/domain/errores'
 import { aDatosApartamento, type DatosApartamentoInput } from '../application/ApartamentoDTO'
 import { Apartamento } from '../domain/Apartamento'
 import { PrismaApartamentoRepository } from './PrismaApartamentoRepository'
@@ -72,5 +73,37 @@ describe('PrismaApartamentoRepository (PostgreSQL real)', () => {
     await repo.guardar(eliminado)
 
     expect((await repo.listarPorPropietario(propietarioId)).map((a) => a.id)).toEqual([visible.id])
+  })
+
+  it('bloqueo optimista: de dos copias leídas a la vez, solo la primera en guardar gana', async () => {
+    const { id } = await publicar()
+    const [a, b] = [(await repo.buscarPorId(id))!, (await repo.buscarPorId(id))!]
+
+    a.agregarImagenes([{ url: 'https://img/a.jpg', publicId: 'a' }])
+    await repo.guardar(a)
+    b.agregarImagenes([{ url: 'https://img/b.jpg', publicId: 'b' }])
+    await expect(repo.guardar(b)).rejects.toThrow(ConflictoDeConcurrenciaError)
+
+    expect((await bd.imagen.findMany({ where: { apartamentoId: id } })).map((i) => i.publicId)).toEqual(['a'])
+    const version = async () => (await bd.apartamento.findUniqueOrThrow({ where: { id } })).version
+    expect(await version()).toBe(1)
+
+    // La copia que ganó puede seguir guardando: el repositorio actualizó su versión
+    a.cambiarEstado('INACTIVO')
+    await repo.guardar(a)
+    expect(await version()).toBe(2)
+  })
+
+  it('bloqueo optimista: dos guardados realmente simultáneos no se pisan', async () => {
+    const { id } = await publicar()
+    const copias = await Promise.all(Array.from({ length: 5 }, () => repo.buscarPorId(id)))
+    copias.forEach((copia, i) => copia!.agregarImagenes([{ url: `https://img/${i}.jpg`, publicId: `p${i}` }]))
+
+    const resultados = await Promise.allSettled(copias.map((copia) => repo.guardar(copia!)))
+
+    const rechazados = resultados.filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+    expect(rechazados).toHaveLength(4)
+    rechazados.forEach((r) => expect(r.reason).toBeInstanceOf(ConflictoDeConcurrenciaError))
+    expect(await bd.imagen.count({ where: { apartamentoId: id } })).toBe(1)
   })
 })

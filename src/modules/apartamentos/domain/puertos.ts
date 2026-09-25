@@ -17,6 +17,10 @@ export interface CriteriosBusqueda {
 
 export interface ApartamentoRepository {
   buscarPorId(id: string): Promise<Apartamento | null>
+  /**
+   * Crea el apartamento si es nuevo o actualiza uno leído de este repositorio (con sus imágenes).
+   * Lanza ConflictoDeConcurrenciaError si otra petición lo guardó entretanto (bloqueo optimista).
+   */
   guardar(apartamento: Apartamento): Promise<void>
   /** Solo apartamentos ACTIVOS, del más reciente al más antiguo. */
   buscarActivos(criterios: CriteriosBusqueda): Promise<Pagina<Apartamento>>

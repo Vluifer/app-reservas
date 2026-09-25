@@ -11,7 +11,10 @@ export interface ReservaRepository {
    * Lanza FechasNoDisponiblesError.
    */
   crearSiHayDisponibilidad(reserva: Reserva): Promise<void>
-  /** Actualiza el estado de una reserva existente. */
+  /**
+   * Actualiza una reserva que se leyó de este repositorio. Lanza ConflictoDeConcurrenciaError
+   * si otra petición la guardó entretanto (bloqueo optimista).
+   */
   guardar(reserva: Reserva): Promise<void>
   hayConflicto(apartamentoId: string, rango: RangoFechas, ahora: Date): Promise<boolean>
   listarPorCliente(clienteId: string): Promise<Reserva[]>

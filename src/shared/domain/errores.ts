@@ -23,3 +23,10 @@ export class NoAutorizadoError extends ErrorDeDominio {
 export function asegurar(condicion: unknown, mensaje: string): asserts condicion {
   if (!condicion) throw new ErrorDeValidacion(mensaje)
 }
+
+/** Otra petición modificó el mismo agregado entre que se leyó y se guardó (bloqueo optimista). */
+export class ConflictoDeConcurrenciaError extends ErrorDeDominio {
+  constructor() {
+    super('Alguien más modificó estos datos al mismo tiempo. Recarga la página e inténtalo de nuevo.')
+  }
+}

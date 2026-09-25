@@ -5,6 +5,7 @@ import { aDatosApartamento } from '@/modules/apartamentos/application/Apartament
 import { Apartamento } from '@/modules/apartamentos/domain/Apartamento'
 import { PrismaApartamentoRepository } from '@/modules/apartamentos/infrastructure/PrismaApartamentoRepository'
 import type { ActorIdentificado } from '@/shared/domain/Actor'
+import { ConflictoDeConcurrenciaError } from '@/shared/domain/errores'
 import { RangoFechas } from '@/shared/domain/RangoFechas'
 import { AvanzarEstadias, CancelarReserva, ConfirmarReserva } from '../application/GestionReservas'
 import { CrearReserva, type CrearReservaInput } from '../application/SolicitudReserva'
@@ -119,5 +120,35 @@ describe('PrismaReservaRepository (PostgreSQL real)', () => {
     expect(await repo.listarEstadiasPorAvanzar(llegada)).toEqual([])
     expect(await repo.hayConflicto(apartamentoId, RangoFechas.crear('2030-01-21', '2030-01-22'), llegada)).toBe(true)
     expect((await repo.listarEstadiasPorAvanzar(salida)).map((r) => r.id)).toEqual([id])
+  })
+
+  it('bloqueo optimista: una confirmación y una cancelación simultáneas no se pisan', async () => {
+    const { id } = await crear.ejecutar(cliente, solicitud())
+    const [paraConfirmar, paraCancelar] = [(await repo.buscarPorId(id))!, (await repo.buscarPorId(id))!]
+
+    paraConfirmar.confirmar(AHORA)
+    paraCancelar.cancelar(AHORA)
+    const resultados = await Promise.allSettled([repo.guardar(paraConfirmar), repo.guardar(paraCancelar)])
+
+    const rechazados = resultados.filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+    expect(rechazados).toHaveLength(1)
+    expect(rechazados[0].reason).toBeInstanceOf(ConflictoDeConcurrenciaError)
+
+    const fila = await bd.reserva.findUniqueOrThrow({ where: { id } })
+    expect(fila.version).toBe(1)
+    // Queda un estado coherente: o confirmada (con fecha) o cancelada (sin fecha de confirmación)
+    expect(fila.estado === 'CONFIRMADA' ? fila.canceladaEn : fila.confirmadaEn).toBeNull()
+  })
+
+  it('bloqueo optimista: la copia que ganó puede seguir guardando', async () => {
+    const { id } = await crear.ejecutar(cliente, solicitud())
+    const reserva = (await repo.buscarPorId(id))!
+
+    reserva.confirmar(AHORA)
+    await repo.guardar(reserva)
+    reserva.cancelar(AHORA)
+    await repo.guardar(reserva)
+
+    expect(await bd.reserva.findUniqueOrThrow({ where: { id } })).toMatchObject({ estado: 'CANCELADA', version: 2 })
   })
 })

@@ -1,6 +1,8 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
 import { Dinero } from '@/shared/domain/Dinero'
+import { ConflictoDeConcurrenciaError } from '@/shared/domain/errores'
 import { hoy, RangoFechas } from '@/shared/domain/RangoFechas'
+import { RegistroDeVersiones } from '@/shared/infrastructure/versiones'
 import { ESTADOS_QUE_OCUPAN } from '../domain/EstadoReserva'
 import { FechasNoDisponiblesError } from '../domain/errores'
 import type { ReservaRepository } from '../domain/puertos'
@@ -10,11 +12,15 @@ const CON_APARTAMENTO = { apartamento: { select: { nombre: true, propietarioId: 
 type FilaReserva = Prisma.ReservaGetPayload<{ include: typeof CON_APARTAMENTO }>
 
 export class PrismaReservaRepository implements ReservaRepository {
+  private readonly versiones = new RegistroDeVersiones<Reserva>()
+
   constructor(private readonly db: PrismaClient) {}
+
+  private cargar = (fila: FilaReserva): Reserva => this.versiones.anotar(aDominio(fila), fila.version)
 
   async buscarPorId(id: string) {
     const fila = await this.db.reserva.findUnique({ where: { id }, include: CON_APARTAMENTO })
-    return fila ? aDominio(fila) : null
+    return fila ? this.cargar(fila) : null
   }
 
   async crearSiHayDisponibilidad(reserva: Reserva) {
@@ -57,19 +63,27 @@ export class PrismaReservaRepository implements ReservaRepository {
         },
       })
     })
+    this.versiones.anotar(reserva, 0)
   }
 
   async guardar(reserva: Reserva) {
+    const version = this.versiones.versionDe(reserva)
+    if (version === undefined) throw new Error('Una reserva nueva se guarda con crearSiHayDisponibilidad()')
+
     const r = reserva.instantanea()
-    await this.db.reserva.update({
-      where: { id: r.id },
+    // Solo actualiza si nadie la cambió desde que se leyó; si no, no toca ninguna fila.
+    const { count } = await this.db.reserva.updateMany({
+      where: { id: r.id, version },
       data: {
         estado: r.estado,
         confirmadaEn: r.confirmadaEn,
         canceladaEn: r.canceladaEn,
         montoReembolso: r.montoReembolso?.aTextoDecimal() ?? null,
+        version: { increment: 1 },
       },
     })
+    if (count === 0) throw new ConflictoDeConcurrenciaError()
+    this.versiones.anotar(reserva, version + 1)
   }
 
   async hayConflicto(apartamentoId: string, rango: RangoFechas, ahora: Date) {
@@ -86,7 +100,7 @@ export class PrismaReservaRepository implements ReservaRepository {
       include: CON_APARTAMENTO,
       orderBy: { createdAt: 'desc' },
     })
-    return filas.map(aDominio)
+    return filas.map(this.cargar)
   }
 
   async listarPorPropietario(propietarioId: string) {
@@ -95,7 +109,7 @@ export class PrismaReservaRepository implements ReservaRepository {
       include: CON_APARTAMENTO,
       orderBy: { createdAt: 'desc' },
     })
-    return filas.map(aDominio)
+    return filas.map(this.cargar)
   }
 
   async listarPendientesVencidas(ahora: Date) {
@@ -103,7 +117,7 @@ export class PrismaReservaRepository implements ReservaRepository {
       where: { estado: 'PENDIENTE', expiraEn: { lte: ahora } },
       include: CON_APARTAMENTO,
     })
-    return filas.map(aDominio)
+    return filas.map(this.cargar)
   }
 
   async listarEstadiasPorAvanzar(ahora: Date) {
@@ -117,7 +131,7 @@ export class PrismaReservaRepository implements ReservaRepository {
       },
       include: CON_APARTAMENTO,
     })
-    return filas.map(aDominio)
+    return filas.map(this.cargar)
   }
 
   async fechasOcupadas(apartamentoId: string, ahora: Date) {
