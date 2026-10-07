@@ -15,8 +15,16 @@ export interface CriteriosBusqueda {
   porPagina: number
 }
 
+/** Una ciudad con oferta publicada y cuántos apartamentos activos tiene. */
+export interface CiudadConOferta {
+  ciudad: string
+  total: number
+}
+
 export interface ApartamentoRepository {
   buscarPorId(id: string): Promise<Apartamento | null>
+  /** En cualquier estado, incluso eliminados (p. ej. para mostrar el historial de reservas). */
+  buscarPorIds(ids: string[]): Promise<Apartamento[]>
   /**
    * Crea el apartamento si es nuevo o actualiza uno leído de este repositorio (con sus imágenes).
    * Lanza ConflictoDeConcurrenciaError si otra petición lo guardó entretanto (bloqueo optimista).
@@ -24,6 +32,8 @@ export interface ApartamentoRepository {
   guardar(apartamento: Apartamento): Promise<void>
   /** Solo apartamentos ACTIVOS, del más reciente al más antiguo. */
   buscarActivos(criterios: CriteriosBusqueda): Promise<Pagina<Apartamento>>
+  /** Ciudades con apartamentos ACTIVOS, de la que más tiene a la que menos. */
+  ciudadesConOferta(limite: number): Promise<CiudadConOferta[]>
   /** Todos los del propietario excepto los eliminados. */
   listarPorPropietario(propietarioId: string): Promise<Apartamento[]>
 }

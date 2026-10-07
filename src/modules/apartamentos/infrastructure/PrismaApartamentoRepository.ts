@@ -4,7 +4,8 @@ import { Dinero } from '@/shared/domain/Dinero'
 import { ConflictoDeConcurrenciaError } from '@/shared/domain/errores'
 import { RegistroDeVersiones } from '@/shared/infrastructure/versiones'
 import { Apartamento } from '../domain/Apartamento'
-import type { ApartamentoRepository, CriteriosBusqueda } from '../domain/puertos'
+import { unificarCiudades } from '../domain/Ciudad'
+import type { ApartamentoRepository, CiudadConOferta, CriteriosBusqueda } from '../domain/puertos'
 
 const CON_IMAGENES = { imagenes: { orderBy: { orden: 'asc' } } } satisfies Prisma.ApartamentoInclude
 type FilaApartamento = Prisma.ApartamentoGetPayload<{ include: typeof CON_IMAGENES }>
@@ -69,6 +70,12 @@ export class PrismaApartamentoRepository implements ApartamentoRepository {
     this.versiones.anotar(apartamento, version === undefined ? 0 : version + 1)
   }
 
+  async buscarPorIds(ids: string[]): Promise<Apartamento[]> {
+    if (ids.length === 0) return []
+    const filas = await this.db.apartamento.findMany({ where: { id: { in: ids } }, include: CON_IMAGENES })
+    return filas.map(this.cargar)
+  }
+
   async buscarActivos(criterios: CriteriosBusqueda): Promise<Pagina<Apartamento>> {
     const where: Prisma.ApartamentoWhereInput = {
       estadoApartamento: 'ACTIVO',
@@ -88,6 +95,19 @@ export class PrismaApartamentoRepository implements ApartamentoRepository {
       this.db.apartamento.count({ where }),
     ])
     return crearPagina(filas.map(this.cargar), total, criterios.pagina, criterios.porPagina)
+  }
+
+  async ciudadesConOferta(limite: number): Promise<CiudadConOferta[]> {
+    // Sin límite en la consulta: "Cartagena" y "CARTAGENA" se unen después, y el límite va sobre el resultado unido
+    const grupos = await this.db.apartamento.groupBy({
+      by: ['ciudad'],
+      where: { estadoApartamento: 'ACTIVO' },
+      _count: { _all: true },
+    })
+    return unificarCiudades(
+      grupos.map((g) => ({ ciudad: g.ciudad, total: g._count._all })),
+      limite,
+    )
   }
 
   async listarPorPropietario(propietarioId: string): Promise<Apartamento[]> {

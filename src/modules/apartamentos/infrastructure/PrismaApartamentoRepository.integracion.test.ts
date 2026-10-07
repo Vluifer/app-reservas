@@ -44,6 +44,32 @@ describe('PrismaApartamentoRepository (PostgreSQL real)', () => {
     expect(imagenes[0]).toMatchObject({ publicId: 'p2', orden: 0, esPrincipal: true })
   })
 
+  it('busca por varios ids en cualquier estado', async () => {
+    const uno = await publicar()
+    const otro = await publicar()
+    otro.cambiarEstado('ELIMINADO')
+    await repo.guardar(otro)
+
+    const encontrados = await repo.buscarPorIds([uno.id, otro.id, 'no-existe'])
+    expect(encontrados.map((a) => a.id).sort()).toEqual([uno.id, otro.id].sort())
+    expect(await repo.buscarPorIds([])).toEqual([])
+  })
+
+  it('cuenta las ciudades con oferta activa, de más a menos', async () => {
+    await publicar({ ciudad: 'Cali' })
+    await publicar({ ciudad: 'Bogotá' })
+    await publicar({ ciudad: 'BOGOTÁ' })
+    const inactivo = await publicar({ ciudad: 'Cartagena' })
+    inactivo.cambiarEstado('INACTIVO')
+    await repo.guardar(inactivo)
+
+    expect(await repo.ciudadesConOferta(5)).toEqual([
+      { ciudad: 'Bogotá', total: 2 },
+      { ciudad: 'Cali', total: 1 },
+    ])
+    expect(await repo.ciudadesConOferta(1)).toHaveLength(1)
+  })
+
   it('busca activos con filtros, exclusiones y paginación', async () => {
     const barato = await publicar({ ciudad: 'Medellín', capacidad: 2, precioPorNoche: 80 }, 1)
     const grande = await publicar({ ciudad: 'MEDELLÍN', capacidad: 6, precioPorNoche: 200 }, 2)

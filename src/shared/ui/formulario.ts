@@ -35,6 +35,15 @@ export function listaSeparadaPorComas(datos: FormData, campo: string): string[] 
     .filter(Boolean)
 }
 
+/** Todos los valores de texto de un campo repetido (p. ej. casillas con el mismo name). */
+export function textos(datos: FormData, campo: string): string[] {
+  return datos
+    .getAll(campo)
+    .filter((v): v is string => typeof v === 'string')
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
 export function archivos(datos: FormData, campo: string): File[] {
   return datos.getAll(campo).filter((v): v is File => v instanceof File && v.size > 0)
 }

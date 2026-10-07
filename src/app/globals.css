@@ -1,29 +1,32 @@
 @import "tailwindcss";
 
-/* Fuentes: variables inyectadas por next/font en <html> */
+/* Fuente: Archivo (variable, con eje de ancho). Una sola familia:
+   ancho expandido para titulares, como los letreros pintados de las fachadas; normal para el texto. */
 @theme inline {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 @theme {
-  /* Neutros cálidos (stone) */
-  --color-fondo: #fafaf9;
+  /* Neutros: blanco puro y grises fríos, sin matiz cálido */
+  --color-fondo: #ffffff;
   --color-superficie: #ffffff;
-  --color-hundido: #f5f5f4; /* chips, skeletons, hover. Sobre él NO usar tinta-tenue */
-  --color-borde: #e7e5e4; /* decorativo: tarjetas, divisores */
-  --color-borde-control: #8c857f; /* inputs y botón secundario: 3.64:1 */
-  --color-tinta: #1c1917; /* texto principal: 16.74:1 */
-  --color-tinta-suave: #57534e; /* texto secundario: 7.30:1 */
-  --color-tinta-tenue: #78716c; /* solo placeholder/meta sobre blanco o fondo: 4.59:1 */
-  --color-tinta-invertida-suave: #d6d3d1; /* secundario sobre tinta: 11.74:1 */
+  --color-hundido: #f4f4f5; /* chips, skeletons, hover. Sobre él NO usar tinta-tenue */
+  --color-borde: #e4e4e7; /* decorativo: tarjetas, divisores */
+  --color-borde-control: #8a8a93; /* inputs y botón secundario: 3.5:1 */
+  --color-tinta: #000000; /* texto principal: 21:1 */
+  --color-tinta-suave: #52525b; /* texto secundario: 7.7:1 */
+  --color-tinta-tenue: #6b6b73; /* solo placeholder/meta sobre blanco: 5.2:1 */
+  --color-tinta-invertida-suave: #d4d4d8; /* secundario sobre tinta */
 
-  /* Acento: terracota */
-  --color-acento: #c4401c; /* CTA, foco, marca. Blanco encima: 5.13:1 */
-  --color-acento-hover: #a3341a;
-  --color-acento-texto: #a3341a; /* texto de acento sobre acento-suave: 6.22:1 */
-  --color-acento-suave: #fff1ec;
-  --color-acento-claro: #ff8a6e; /* SOLO sobre tinta: 7.59:1 */
+  /* Acento: negro. La interfaz es monocroma (blanco, grises fríos y negro); el color lo ponen las fotos */
+  --color-acento: #000000; /* CTA y foco. Blanco encima: 21:1 */
+  --color-acento-hover: #27272a;
+  --color-acento-texto: #18181b; /* texto sobre acento-suave: 16:1 */
+  --color-acento-suave: #ececee; /* "en curso", opción marcada */
+  --color-acento-claro: #d4d4d8; /* SOLO sobre tinta */
+
+  /* Cabecera: gris oscuro suave de la misma familia fría (zinc); se distingue de la página sin pesar */
+  --color-cabecera: #3f3f46; /* blanco encima: 10.4:1; blanco/75: 6.7:1 */
 
   /* Semánticos */
   --color-exito-texto: #166534;
@@ -36,17 +39,33 @@
   --color-peligro-suave: #fef2f2;
 
   /* Tipografía display (hero) */
-  --text-display: clamp(2.5rem, 1.5rem + 4.2vw, 4.75rem);
+  --text-display: clamp(2.25rem, 1.5rem + 2.6vw, 3.5rem);
   --text-display--line-height: 1.02;
-  --text-display--letter-spacing: -0.015em;
 
-  /* Radios */
-  --radius-control: 0.75rem;
+  /* Radios: suaves; las fotos y tarjetas más redondeadas que los controles */
+  --radius-control: 0.5rem;
   --radius-tarjeta: 1rem;
   --radius-bloque: 1.5rem;
 
   /* Sombras: solo en elementos flotantes */
-  --shadow-flotante: 0 1px 2px rgb(28 25 23 / 0.04), 0 16px 40px -16px rgb(28 25 23 / 0.22);
+  --shadow-flotante: 0 1px 2px rgb(0 0 0 / 0.06), 0 24px 48px -20px rgb(0 0 0 / 0.35);
+}
+
+/* Titulares: Archivo expandido y pesado */
+@utility font-display {
+  font-family: var(--font-sans);
+  font-stretch: 125%;
+  font-variation-settings: "wdth" 125;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+}
+
+/* Filas deslizables en pantallas táctiles: sin barra visible (se desliza con el dedo) */
+@utility sin-barra {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer base {

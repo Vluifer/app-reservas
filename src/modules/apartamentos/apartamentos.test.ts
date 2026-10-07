@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { AHORA, admin, cliente, datosApartamento, otroPropietario, propietario, RelojFijo } from '../../../tests/fabricas'
 import { ConflictoDeConcurrenciaError, NoAutorizadoError, NoEncontradoError } from '@/shared/domain/errores'
-import { BuscarApartamentos, ObtenerApartamento } from './application/ConsultasApartamentos'
+import { BuscarApartamentos, ObtenerApartamento, ObtenerFichasApartamentos, ObtenerVitrina } from './application/ConsultasApartamentos'
 import {
   ActualizarApartamento,
   CambiarEstadoApartamento,
@@ -117,6 +117,34 @@ describe('Módulo apartamentos', () => {
       ocupados = [grande.id]
       const disponibles = await buscar.ejecutar({ ciudad: 'medellín', llegada: '2030-02-01', salida: '2030-02-03' })
       expect(disponibles.items.map((a) => a.id)).toEqual([medellin.id])
+    })
+
+    it('las fichas incluyen apartamentos eliminados (el historial de reservas sigue mostrándolos)', async () => {
+      const activo = await publicar.ejecutar(propietario, datosApartamento({ nombre: 'Activo' }))
+      const eliminado = await publicar.ejecutar(propietario, datosApartamento({ nombre: 'Eliminado', ciudad: 'Cali' }))
+      await new CambiarEstadoApartamento(repo).ejecutar(propietario, eliminado.id, 'ELIMINADO')
+
+      const fichas = await new ObtenerFichasApartamentos(repo).ejecutar([activo.id, eliminado.id, activo.id, 'no-existe'])
+
+      expect(fichas.size).toBe(2)
+      expect(fichas.get(eliminado.id)).toMatchObject({ nombre: 'Eliminado', ciudad: 'Cali', imagenPrincipal: null })
+    })
+
+    it('la vitrina agrupa por las ciudades con más oferta activa', async () => {
+      await publicar.ejecutar(propietario, datosApartamento({ ciudad: 'Cali' }))
+      await publicar.ejecutar(propietario, datosApartamento({ ciudad: 'Medellín' }))
+      await publicar.ejecutar(propietario, datosApartamento({ ciudad: 'Medellín' }))
+      const oculto = await publicar.ejecutar(propietario, datosApartamento({ ciudad: 'Bogotá' }))
+      await new CambiarEstadoApartamento(repo).ejecutar(propietario, oculto.id, 'INACTIVO')
+
+      const vitrina = await new ObtenerVitrina(repo).ejecutar({ ciudades: 3, porFila: 1 })
+
+      expect(vitrina.ciudades.map(({ ciudad, total }) => [ciudad, total])).toEqual([
+        ['Medellín', 2],
+        ['Cali', 1],
+      ])
+      expect(vitrina.ciudades[0].apartamentos).toHaveLength(1)
+      expect(vitrina.recientes).toHaveLength(1)
     })
   })
 

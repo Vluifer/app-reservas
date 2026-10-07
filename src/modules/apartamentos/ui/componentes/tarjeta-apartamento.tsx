@@ -21,16 +21,26 @@ export function ImagenApartamento({ url, alt, sizes }: { url: string | null; alt
   )
 }
 
-export function TarjetaApartamento({ apartamento, consulta = '' }: { apartamento: ApartamentoDTO; consulta?: string }) {
+const TAMANOS_REJILLA = '(max-width: 768px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw'
+
+export function TarjetaApartamento({
+  apartamento,
+  consulta = '',
+  sizes = TAMANOS_REJILLA,
+}: {
+  apartamento: ApartamentoDTO
+  consulta?: string
+  sizes?: string
+}) {
   return (
     <Link href={`/apartamentos/${apartamento.id}${consulta}`} className="group block rounded-tarjeta focus-visible:outline-offset-4">
       <ImagenApartamento
         url={apartamento.imagenPrincipal}
         alt={apartamento.nombre}
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        sizes={sizes}
       />
       <div className="mt-3 space-y-0.5">
-        <h3 className="font-semibold tracking-tight text-tinta decoration-acento decoration-2 underline-offset-4 group-hover:underline">
+        <h3 className="font-semibold tracking-tight text-tinta decoration-tinta/40 decoration-1 underline-offset-4 group-hover:underline">
           {apartamento.nombre}
         </h3>
         <p className="text-sm text-tinta-suave">
@@ -38,7 +48,7 @@ export function TarjetaApartamento({ apartamento, consulta = '' }: { apartamento
         </p>
         <p className="text-sm text-tinta-suave">Hasta {apartamento.capacidad} huéspedes</p>
         <p className="pt-1.5 text-sm text-tinta-suave">
-          <span className="text-base font-semibold tabular-nums text-tinta">{formatoMoneda(apartamento.precioPorNoche)}</span> / noche
+          <span className="font-display text-base tabular-nums tracking-normal text-tinta">{formatoMoneda(apartamento.precioPorNoche)}</span> / noche
         </p>
       </div>
     </Link>
@@ -60,10 +70,26 @@ export function RejillaApartamentos({ apartamentos, consulta }: { apartamentos: 
     )
   }
   return (
-    <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {apartamentos.map((a) => (
         <TarjetaApartamento key={a.id} apartamento={a} consulta={consulta} />
       ))}
     </div>
+  )
+}
+
+/** Fila con desplazamiento horizontal para la portada: en móvil asoma la siguiente tarjeta para invitar a deslizar. */
+export function FilaApartamentos({ apartamentos, etiqueta }: { apartamentos: ApartamentoDTO[]; etiqueta: string }) {
+  return (
+    <ul
+      aria-label={etiqueta}
+      className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-5 max-sm:sin-barra overflow-x-auto px-4 pb-4 sm:mx-0 sm:scroll-px-0 sm:px-0"
+    >
+      {apartamentos.map((a) => (
+        <li key={a.id} className="w-[78%] shrink-0 snap-start sm:w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-2.5rem)/3)] xl:w-[calc((100%-3.75rem)/4)]">
+          <TarjetaApartamento apartamento={a} sizes="(max-width: 640px) 78vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw" />
+        </li>
+      ))}
+    </ul>
   )
 }

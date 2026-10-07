@@ -1,27 +1,21 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist, Instrument_Serif } from 'next/font/google'
+import { Archivo } from 'next/font/google'
 import { Navbar } from '@/modules/identidad/ui/componentes/navbar'
+import { ContadorSolicitudes } from '@/modules/reservas/ui/componentes/contador-solicitudes'
 import './globals.css'
 
-const sans = Geist({ subsets: ['latin'], variable: '--font-geist-sans', display: 'swap' })
-const display = Instrument_Serif({
-  subsets: ['latin'],
-  weight: '400',
-  style: ['normal', 'italic'],
-  variable: '--font-instrument-serif',
-  display: 'swap',
-})
+const archivo = Archivo({ subsets: ['latin'], axes: ['wdth'], variable: '--font-archivo', display: 'swap' })
 
 export const metadata: Metadata = {
   title: 'Reservas de apartamentos',
   description: 'Encuentra y reserva apartamentos directamente con sus propietarios',
 }
 
-export const viewport: Viewport = { viewportFit: 'cover', themeColor: '#FAFAF9' }
+export const viewport: Viewport = { viewportFit: 'cover', themeColor: '#3F3F46' }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${sans.variable} ${display.variable}`}>
+    <html lang="es" className={archivo.variable}>
       <body className="min-h-dvh bg-fondo font-sans text-tinta antialiased">
         <a
           href="#contenido"
@@ -29,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           Saltar al contenido
         </a>
-        <Navbar />
+        <Navbar avisoPanel={<ContadorSolicitudes tono="claro" />} />
         <main id="contenido" className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
           {children}
         </main>

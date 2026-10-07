@@ -6,7 +6,7 @@ import { requerirActor } from '@/modules/identidad/ui/sesion'
 import { ROLES_ANFITRION } from '@/shared/domain/Actor'
 import type { PoliticaCancelacion } from '@/shared/domain/PoliticaCancelacion'
 import { conParametro, ejecutarYVolver, manejarErrores, type EstadoAccion } from '@/shared/ui/acciones'
-import { archivos, listaSeparadaPorComas, numero, numeroOpcional, texto, textoOpcional } from '@/shared/ui/formulario'
+import { archivos, listaSeparadaPorComas, numero, numeroOpcional, texto, textoOpcional, textos } from '@/shared/ui/formulario'
 import type { DatosApartamentoInput } from '../application/ApartamentoDTO'
 import type { EstadoApartamento } from '../domain/Apartamento'
 
@@ -24,7 +24,8 @@ function leerDatosApartamento(datos: FormData): DatosApartamentoInput {
     metrosCuadrados: numeroOpcional(datos, 'metrosCuadrados', 'Metros cuadrados'),
     precioPorNoche: numero(datos, 'precioPorNoche', 'Precio por noche'),
     tarifaLimpieza: numeroOpcional(datos, 'tarifaLimpieza', 'Tarifa de limpieza') ?? 0,
-    amenidades: listaSeparadaPorComas(datos, 'amenidades'),
+    // Las fichas marcadas ("comodidad") más las que el propietario escribe a mano
+    amenidades: [...textos(datos, 'comodidad'), ...listaSeparadaPorComas(datos, 'amenidades')],
     politicaCancelacion: texto(datos, 'politicaCancelacion') as PoliticaCancelacion,
   }
 }

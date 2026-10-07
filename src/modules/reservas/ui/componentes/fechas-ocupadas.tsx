@@ -8,7 +8,7 @@ export async function FechasOcupadas({ apartamentoId }: { apartamentoId: string 
 
   return (
     <section className="border-t border-borde pt-10">
-      <h2 className="font-display text-2xl text-tinta sm:text-3xl">Fechas no disponibles</h2>
+      <h2 className="font-display text-xl text-tinta sm:text-2xl">Fechas no disponibles</h2>
       <ul className="mt-4 flex flex-wrap gap-2">
         {fechas.map((f) => (
           <li key={f.llegada} className="rounded-control bg-hundido px-3 py-1.5 text-sm tabular-nums text-tinta-suave">

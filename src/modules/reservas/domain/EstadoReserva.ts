@@ -33,6 +33,16 @@ const TRANSICIONES: Record<EstadoReserva, readonly EstadoReserva[]> = {
   EXPIRADA: [],
 }
 
+/** El propietario la aceptó y no se canceló: cuenta como estadía (y como valor) del propietario. */
+export function esEstadiaAceptada(estado: EstadoReserva): boolean {
+  return estado === 'CONFIRMADA' || estado === 'EN_CURSO' || estado === 'COMPLETADA'
+}
+
+/** Estado final: la reserva ya no cambiará (terminó, se canceló, se rechazó o venció). */
+export function esEstadoFinal(estado: EstadoReserva): boolean {
+  return TRANSICIONES[estado].length === 0
+}
+
 export function puedeTransicionar(desde: EstadoReserva, hacia: EstadoReserva): boolean {
   return TRANSICIONES[desde].includes(hacia)
 }

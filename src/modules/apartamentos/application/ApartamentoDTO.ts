@@ -1,6 +1,7 @@
 import { Dinero } from '@/shared/domain/Dinero'
 import type { PoliticaCancelacion } from '@/shared/domain/PoliticaCancelacion'
 import type { Apartamento, DatosApartamento, EstadoApartamento } from '../domain/Apartamento'
+import { escrituraLegible } from '../domain/Ciudad'
 
 /** Datos planos que salen del módulo hacia la interfaz (serializables). */
 export interface ApartamentoDTO {
@@ -63,8 +64,8 @@ export function aApartamentoDTO(apartamento: Apartamento): ApartamentoDTO {
     nombre: a.nombre,
     descripcion: a.descripcion,
     direccion: a.direccion,
-    ciudad: a.ciudad,
-    region: a.region,
+    ciudad: escrituraLegible(a.ciudad),
+    region: escrituraLegible(a.region),
     codigoPostal: a.codigoPostal,
     capacidad: a.capacidad,
     numHabitaciones: a.numHabitaciones,

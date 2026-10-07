@@ -3,6 +3,7 @@ import { AHORA, apartamentoReservable, cliente, propietario } from '../../../../
 import { Dinero } from '@/shared/domain/Dinero'
 import { RangoFechas } from '@/shared/domain/RangoFechas'
 import { calcularPrecio } from './CalculadoraPrecio'
+import { esEstadiaAceptada, esEstadoFinal, ESTADOS_RESERVA } from './EstadoReserva'
 import { TransicionInvalidaError } from './errores'
 import { calcularReembolso } from './Reembolso'
 import { HORAS_PARA_CONFIRMAR, Reserva } from './Reserva'
@@ -51,6 +52,18 @@ describe('calcularReembolso', () => {
 
   it('ESTRICTA: nunca hay reembolso', () => {
     expect(calcularReembolso('ESTRICTA', total, llegada, new Date('2029-01-01T00:00:00Z')).esCero()).toBe(true)
+  })
+})
+
+describe('esEstadoFinal', () => {
+  it('solo las reservas terminadas, canceladas, rechazadas o vencidas son finales', () => {
+    expect(ESTADOS_RESERVA.filter(esEstadoFinal)).toEqual(['COMPLETADA', 'CANCELADA', 'RECHAZADA', 'EXPIRADA'])
+  })
+})
+
+describe('esEstadiaAceptada', () => {
+  it('solo cuentan las estadías que el propietario aceptó y nadie canceló', () => {
+    expect(ESTADOS_RESERVA.filter(esEstadiaAceptada)).toEqual(['CONFIRMADA', 'EN_CURSO', 'COMPLETADA'])
   })
 })
 

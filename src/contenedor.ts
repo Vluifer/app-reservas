@@ -10,7 +10,7 @@ import { crearAutenticacion } from '@/modules/identidad/infrastructure/auth'
 import { BcryptPasswordHasher } from '@/modules/identidad/infrastructure/BcryptPasswordHasher'
 import { PrismaUsuarioRepository } from '@/modules/identidad/infrastructure/PrismaUsuarioRepository'
 
-import { BuscarApartamentos, ObtenerApartamento } from '@/modules/apartamentos/application/ConsultasApartamentos'
+import { BuscarApartamentos, ObtenerApartamento, ObtenerFichasApartamentos, ObtenerVitrina } from '@/modules/apartamentos/application/ConsultasApartamentos'
 import {
   ActualizarApartamento,
   CambiarEstadoApartamento,
@@ -59,6 +59,8 @@ export const autenticacion = crearAutenticacion(identidad.autenticarUsuario)
 export const apartamentos = {
   buscar: new BuscarApartamentos(apartamentosRepo, reservasRepo),
   obtener: new ObtenerApartamento(apartamentosRepo),
+  vitrina: new ObtenerVitrina(apartamentosRepo),
+  fichas: new ObtenerFichasApartamentos(apartamentosRepo),
   obtenerParaGestion: new ObtenerApartamentoParaGestion(apartamentosRepo),
   publicar: new PublicarApartamento(apartamentosRepo),
   actualizar: new ActualizarApartamento(apartamentosRepo),

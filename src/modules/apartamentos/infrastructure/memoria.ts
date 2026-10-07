@@ -2,7 +2,8 @@ import { crearPagina } from '@/shared/domain/comunes'
 import { ConflictoDeConcurrenciaError } from '@/shared/domain/errores'
 import { RegistroDeVersiones } from '@/shared/infrastructure/versiones'
 import { Apartamento, type ApartamentoProps } from '../domain/Apartamento'
-import type { AlmacenImagenes, ApartamentoRepository, ArchivoImagen, CriteriosBusqueda } from '../domain/puertos'
+import { unificarCiudades } from '../domain/Ciudad'
+import type { AlmacenImagenes, ApartamentoRepository, ArchivoImagen, CiudadConOferta, CriteriosBusqueda } from '../domain/puertos'
 
 /** Implementaciones en memoria para pruebas unitarias (sin base de datos ni Cloudinary). Mismo bloqueo optimista que Prisma. */
 
@@ -18,6 +19,13 @@ export class EnMemoriaApartamentoRepository implements ApartamentoRepository {
   async buscarPorId(id: string) {
     const props = this.registros.get(id)
     return props ? this.cargar(props) : null
+  }
+
+  async buscarPorIds(ids: string[]) {
+    return ids.flatMap((id) => {
+      const props = this.registros.get(id)
+      return props ? [this.cargar(props)] : []
+    })
   }
 
   async guardar(apartamento: Apartamento) {
@@ -45,6 +53,17 @@ export class EnMemoriaApartamentoRepository implements ApartamentoRepository {
     const inicio = (criterios.pagina - 1) * criterios.porPagina
     const items = coincidencias.slice(inicio, inicio + criterios.porPagina).map((p) => this.cargar(p))
     return crearPagina(items, coincidencias.length, criterios.pagina, criterios.porPagina)
+  }
+
+  async ciudadesConOferta(limite: number): Promise<CiudadConOferta[]> {
+    const totales = new Map<string, number>()
+    for (const a of this.registros.values()) {
+      if (a.estado === 'ACTIVO') totales.set(a.ciudad, (totales.get(a.ciudad) ?? 0) + 1)
+    }
+    return unificarCiudades(
+      [...totales].map(([ciudad, total]) => ({ ciudad, total })),
+      limite,
+    )
   }
 
   async listarPorPropietario(propietarioId: string) {
