@@ -29,14 +29,17 @@ export default async function CalendarioPagina({ searchParams }: { searchParams:
   const ids = porAntiguedad.map((a) => a.id)
   // Una reserva que ya no está en el mes (o se rechazó) vuelve a la vista del día
   const seleccionada = reservaId ? lista.find((r) => r.id === reservaId) : undefined
+  const mensajes = <MensajesDeRuta error={unico(params.error)} exito={unico(params.exito)} />
+  // Vuelta de Confirmar/Rechazar: el mensaje va dentro del panel, junto al botón que se pulsó
+  const vueltaDeAccion = Boolean(reservaId && (unico(params.exito) || unico(params.error)))
 
   return (
     <div className="space-y-10">
       <PortadaPanel titulo="Calendario" descripcion="Llegadas, salidas y estadías de todos tus apartamentos." />
       <FranjaPanel>
-        <MensajesDeRuta error={unico(params.error)} exito={unico(params.exito)} />
-        {/* Vuelta de Confirmar/Rechazar: la redirección pierde #detalle, así que se baja al panel desde el cliente */}
-        {reservaId && (unico(params.exito) || unico(params.error)) && <IrAlDetalle id="detalle" />}
+        {!vueltaDeAccion && mensajes}
+        {/* La redirección de la acción pierde #detalle, así que se baja al panel desde el cliente */}
+        {vueltaDeAccion && <IrAlDetalle id="detalle" />}
         {misApartamentos.length === 0 ? (
           <EstadoVacio
             titulo="Todavía no has publicado apartamentos"
@@ -52,6 +55,7 @@ export default async function CalendarioPagina({ searchParams }: { searchParams:
             <CalendarioMes mes={mes} semanas={semanas} dia={dia} hoy={hoyTexto} reservas={lista} apartamentosPorAntiguedad={porAntiguedad} />
             {/* La cabecera fija mide 5rem: el panel se pega debajo y el ancla #detalle no queda tapada */}
             <aside id="detalle" aria-label="Detalle del día" className="scroll-mt-28 rounded-tarjeta bg-superficie p-5 shadow-tarjeta lg:sticky lg:top-28">
+              {vueltaDeAccion && mensajes}
               {seleccionada ? (
                 <DetalleReservaCalendario
                   reserva={seleccionada}
