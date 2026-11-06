@@ -37,11 +37,33 @@ describe('PrismaReservaRepository (PostgreSQL real)', () => {
     propietario = await crearUsuario('PROPIETARIO')
     cliente = await crearUsuario('CLIENTE')
     const apartamento = Apartamento.publicar(propietario.id, aDatosApartamento(datosApartamento()), AHORA)
-    await apartamentosRepo.guardar(apartamento)
+    await apartamentosRepo.crear(apartamento)
     apartamentoId = apartamento.id
   })
 
   afterAll(() => bd.$disconnect())
+
+  it('lista las reservas del propietario que tocan el rango, con los bordes incluidos', async () => {
+    const segundo = Apartamento.publicar(propietario.id, aDatosApartamento(datosApartamento({ nombre: 'Segundo' })), AHORA)
+    await apartamentosRepo.crear(segundo)
+    const otroPropietario = await crearUsuario('PROPIETARIO')
+    const ajeno = Apartamento.publicar(otroPropietario.id, aDatosApartamento(datosApartamento({ nombre: 'Ajeno' })), AHORA)
+    await apartamentosRepo.crear(ajeno)
+
+    const sale = await crear.ejecutar(cliente, solicitud({ llegada: '2030-01-15', salida: '2030-01-20' }))
+    const llega = await crear.ejecutar(cliente, solicitud({ llegada: '2030-01-27', salida: '2030-01-29' }))
+    const abarca = await crear.ejecutar(cliente, solicitud({ apartamentoId: segundo.id, llegada: '2030-01-18', salida: '2030-02-02' }))
+    await crear.ejecutar(cliente, solicitud({ llegada: '2030-01-11', salida: '2030-01-14' })) // termina antes
+    await crear.ejecutar(cliente, solicitud({ apartamentoId: ajeno.id, llegada: '2030-01-21', salida: '2030-01-23' }))
+
+    const lista = await repo.listarPorPropietarioEnRango(
+      propietario.id,
+      new Date('2030-01-20T00:00:00.000Z'),
+      new Date('2030-01-27T00:00:00.000Z'),
+    )
+
+    expect(lista.map((r) => r.id)).toEqual([sale.id, abarca.id, llega.id])
+  })
 
   it('guarda y recupera la reserva con fechas y precios exactos', async () => {
     const creada = await crear.ejecutar(cliente, solicitud({ telefono: '3001234567', notas: 'Hola' }))

@@ -31,4 +31,15 @@ describe('PrismaUsuarioRepository (PostgreSQL real)', () => {
     await repo.guardar(Usuario.registrar(datos, AHORA))
     await expect(repo.guardar(Usuario.registrar(datos, AHORA))).rejects.toThrow(EmailYaRegistradoError)
   })
+
+  it('guarda, cambia y quita la foto de perfil', async () => {
+    const usuario = Usuario.registrar({ nombre: 'Laura', email: 'laura@correo.com', passwordHash: 'x' }, AHORA)
+    usuario.cambiarFoto({ url: 'https://imagenes.test/a.jpg', publicId: 'usuarios/a' })
+    await repo.guardar(usuario)
+    expect((await repo.buscarPorId(usuario.id))?.foto).toEqual({ url: 'https://imagenes.test/a.jpg', publicId: 'usuarios/a' })
+
+    usuario.quitarFoto()
+    await repo.guardar(usuario)
+    expect((await repo.buscarPorId(usuario.id))?.foto).toBeNull()
+  })
 })

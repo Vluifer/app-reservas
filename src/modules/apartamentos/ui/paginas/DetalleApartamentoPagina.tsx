@@ -34,7 +34,7 @@ export default async function DetalleApartamentoPagina({ params, searchParams }:
   ]
 
   return (
-    <div className="space-y-8 pb-24 lg:space-y-10 lg:pb-0">
+    <div className="space-y-8 lg:space-y-10">
       <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
         <div className="max-w-3xl">
           <h1 className="text-balance font-display text-3xl leading-[1.05] text-tinta sm:text-4xl">{apartamento.nombre}</h1>
@@ -94,7 +94,7 @@ export default async function DetalleApartamentoPagina({ params, searchParams }:
       <div id="barra-reserva" className="fixed inset-x-0 bottom-0 z-30 border-t border-borde bg-superficie/95 backdrop-blur-md lg:hidden">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
           <p className="text-sm text-tinta-suave">
-            <span className="text-lg font-semibold tabular-nums text-tinta">{formatoMoneda(apartamento.precioPorNoche)}</span> / noche
+            <span className="font-cifra text-lg tabular-nums text-tinta">{formatoMoneda(apartamento.precioPorNoche)}</span> / noche
           </p>
           <a href="#reservar" className={claseBoton()}>
             Reservar

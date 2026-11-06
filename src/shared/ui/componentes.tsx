@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import type { ComponentProps, ReactNode } from 'react'
 
 /** Componentes visuales básicos compartidos por todos los módulos. Sin lógica de negocio. */
@@ -9,6 +10,10 @@ const VARIANTES_BOTON = {
   /** Acción destructiva que no debe dominar la página: borde y texto rojos sobre blanco */
   peligroSuave: 'border border-peligro/40 bg-superficie text-peligro-texto hover:border-peligro hover:bg-peligro-suave',
   fantasma: 'text-tinta-suave hover:bg-hundido hover:text-tinta',
+  /** Sobre fondo piedra (portadas del panel): botón principal blanco */
+  claro: 'bg-white text-tinta hover:bg-white/90',
+  /** Sobre fondo piedra: acción secundaria con contorno */
+  contornoClaro: 'border border-white/30 text-white hover:border-white hover:bg-white/10',
 }
 export type VarianteBoton = keyof typeof VARIANTES_BOTON
 
@@ -170,10 +175,22 @@ export function EtiquetaEstado({ estado }: { estado: string }) {
   )
 }
 
-const TAMANOS_AVATAR = { sm: 'size-9 text-xs', md: 'size-11 text-sm' }
+const TAMANOS_AVATAR = { sm: 'size-9 text-xs', md: 'size-11 text-sm', lg: 'size-28 text-3xl' }
+const PIXELES_AVATAR = { sm: 36, md: 44, lg: 112 }
 
-/** Círculo con las iniciales de una persona ("Paula Gómez" → "PG"). Cuando exista la foto de perfil, irá aquí. */
-export function Avatar({ nombre, tamano = 'md' }: { nombre: string; tamano?: keyof typeof TAMANOS_AVATAR }) {
+/** Círculo con la foto de la persona o, si no tiene, sus iniciales ("Paula Gómez" → "PG"). Decorativo: el nombre va al lado. */
+export function Avatar({ nombre, foto, tamano = 'md' }: { nombre: string; foto?: string | null; tamano?: keyof typeof TAMANOS_AVATAR }) {
+  if (foto) {
+    return (
+      <Image
+        src={foto}
+        alt=""
+        width={PIXELES_AVATAR[tamano]}
+        height={PIXELES_AVATAR[tamano]}
+        className={`shrink-0 rounded-full bg-hundido object-cover ${TAMANOS_AVATAR[tamano]}`}
+      />
+    )
+  }
   const iniciales = nombre
     .split(/\s+/)
     .filter(Boolean)

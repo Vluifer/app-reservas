@@ -48,7 +48,9 @@ export function siNoExiste404(error: unknown): never {
   throw error
 }
 
+/** Añade `clave=valor` a la consulta de la ruta, dejando el ancla (#...) al final para que el navegador baje a ella. */
 export function conParametro(ruta: string, clave: string, valor: string): string {
-  const separador = ruta.includes('?') ? '&' : '?'
-  return `${ruta}${separador}${clave}=${encodeURIComponent(valor)}`
+  const [base, ancla] = ruta.split('#')
+  const separador = base.includes('?') ? '&' : '?'
+  return `${base}${separador}${clave}=${encodeURIComponent(valor)}${ancla === undefined ? '' : `#${ancla}`}`
 }

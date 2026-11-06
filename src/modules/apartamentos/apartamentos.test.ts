@@ -10,8 +10,10 @@ import {
   PublicarApartamento,
 } from './application/GestionApartamentos'
 import { EliminarImagenApartamento, SubirImagenesApartamento } from './application/ImagenesApartamento'
-import type { ArchivoImagen, ConsultaOcupacion } from './domain/puertos'
-import { AlmacenImagenesFalso, EnMemoriaApartamentoRepository } from './infrastructure/memoria'
+import type { ArchivoImagen } from '@/shared/domain/imagenes'
+import { AlmacenImagenesFalso } from '@/shared/infrastructure/memoria'
+import type { ConsultaOcupacion } from './domain/puertos'
+import { EnMemoriaApartamentoRepository } from './infrastructure/memoria'
 
 function imagen(nombre: string, cambios: Partial<ArchivoImagen> = {}): ArchivoImagen {
   return { nombre, tipo: 'image/jpeg', tamano: 1000, contenido: new ArrayBuffer(8), ...cambios }
@@ -145,6 +147,20 @@ describe('Módulo apartamentos', () => {
       ])
       expect(vitrina.ciudades[0].apartamentos).toHaveLength(1)
       expect(vitrina.recientes).toHaveLength(1)
+    })
+
+    it('la vitrina cuenta toda la oferta activa, aunque muestre menos ciudades y tarjetas', async () => {
+      await publicar.ejecutar(propietario, datosApartamento({ ciudad: 'Cali' }))
+      await publicar.ejecutar(propietario, datosApartamento({ ciudad: 'Medellín' }))
+      await publicar.ejecutar(propietario, datosApartamento({ ciudad: 'MEDELLÍN' }))
+      const oculto = await publicar.ejecutar(propietario, datosApartamento({ ciudad: 'Bogotá' }))
+      await new CambiarEstadoApartamento(repo).ejecutar(propietario, oculto.id, 'INACTIVO')
+
+      const vitrina = await new ObtenerVitrina(repo).ejecutar({ ciudades: 1, porFila: 1 })
+
+      expect(vitrina.ciudades).toHaveLength(1)
+      expect(vitrina.totalApartamentos).toBe(3)
+      expect(vitrina.totalCiudades).toBe(2)
     })
   })
 

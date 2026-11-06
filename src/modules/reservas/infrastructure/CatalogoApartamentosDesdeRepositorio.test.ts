@@ -11,7 +11,7 @@ describe('CatalogoApartamentosDesdeRepositorio (capa anticorrupción)', () => {
 
   async function publicar(cambios = {}) {
     const apartamento = Apartamento.publicar(propietario.id, aDatosApartamento(datosApartamento(cambios)), AHORA)
-    await repo.guardar(apartamento)
+    await repo.crear(apartamento)
     return apartamento
   }
 

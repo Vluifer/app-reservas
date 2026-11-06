@@ -56,7 +56,7 @@ export async function PanelReserva({
     <Tarjeta className="h-fit space-y-5 shadow-flotante lg:sticky lg:top-24">
       <div>
         <p className="flex items-baseline gap-1.5">
-          <span className="font-display text-3xl tabular-nums text-tinta">{formatoMoneda(precioPorNoche)}</span>
+          <span className="font-cifra text-3xl tabular-nums text-tinta">{formatoMoneda(precioPorNoche)}</span>
           <span className="text-sm text-tinta-suave">/ noche</span>
         </p>
         {tarifaLimpieza > 0 && (

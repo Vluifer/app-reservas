@@ -31,7 +31,7 @@ export function escrituraLegible(lugar: string): string {
  * Une los conteos de una misma ciudad escrita de distintas formas y la nombra con la escritura
  * más usada, prefiriendo la que no está toda en mayúsculas. Devuelve de la ciudad con más oferta a la de menos.
  */
-export function unificarCiudades(grupos: CiudadConOferta[], limite: number): CiudadConOferta[] {
+export function unificarCiudades(grupos: CiudadConOferta[], limite?: number): CiudadConOferta[] {
   const porClave = new Map<string, { total: number; escrituras: CiudadConOferta[] }>()
   for (const grupo of grupos) {
     const clave = claveCiudad(grupo.ciudad)

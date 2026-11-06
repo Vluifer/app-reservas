@@ -1,6 +1,6 @@
 import type { Actor } from '@/shared/domain/Actor'
 import { relojDelSistema, type Reloj } from '@/shared/domain/comunes'
-import { NoAutorizadoError, NoEncontradoError } from '@/shared/domain/errores'
+import { ConflictoDeConcurrenciaError, NoAutorizadoError, NoEncontradoError } from '@/shared/domain/errores'
 import type { ReservaRepository } from '../domain/puertos'
 import type { Reserva } from '../domain/Reserva'
 import { aReservaDTO, type ReservaDTO } from './ReservaDTO'
@@ -55,6 +55,32 @@ export class CancelarReserva {
   }
 }
 
+/** Resultado de una tarea programada: cuántas reservas cambió y cuántas dejó para la próxima corrida. */
+export interface ResultadoLote {
+  procesadas: number
+  omitidas: number
+}
+
+/**
+ * Aplica `cambio` a cada reserva y la guarda. Si otra petición modificó una reserva entretanto
+ * (p. ej. el propietario la confirmó en ese instante), se omite: la próxima corrida la vuelve a evaluar
+ * con su estado nuevo. Así un conflicto no detiene el resto del lote.
+ */
+async function procesarLote(reservas: ReservaRepository, lote: Reserva[], cambio: (reserva: Reserva) => void): Promise<ResultadoLote> {
+  const resultado = { procesadas: 0, omitidas: 0 }
+  for (const reserva of lote) {
+    try {
+      cambio(reserva)
+      await reservas.guardar(reserva)
+      resultado.procesadas++
+    } catch (error) {
+      if (!(error instanceof ConflictoDeConcurrenciaError)) throw error
+      resultado.omitidas++
+    }
+  }
+  return resultado
+}
+
 /** Tarea programada: marca como EXPIRADAS las solicitudes que nadie confirmó a tiempo. */
 export class ExpirarReservasPendientes {
   constructor(
@@ -62,14 +88,10 @@ export class ExpirarReservasPendientes {
     private readonly reloj: Reloj = relojDelSistema,
   ) {}
 
-  async ejecutar(): Promise<number> {
+  async ejecutar(): Promise<ResultadoLote> {
     const ahora = this.reloj.ahora()
     const vencidas = await this.reservas.listarPendientesVencidas(ahora)
-    for (const reserva of vencidas) {
-      reserva.expirar(ahora)
-      await this.reservas.guardar(reserva)
-    }
-    return vencidas.length
+    return procesarLote(this.reservas, vencidas, (reserva) => reserva.expirar(ahora))
   }
 }
 
@@ -80,14 +102,10 @@ export class AvanzarEstadias {
     private readonly reloj: Reloj = relojDelSistema,
   ) {}
 
-  async ejecutar(): Promise<number> {
+  async ejecutar(): Promise<ResultadoLote> {
     const ahora = this.reloj.ahora()
     const porAvanzar = await this.reservas.listarEstadiasPorAvanzar(ahora)
-    for (const reserva of porAvanzar) {
-      reserva.avanzarEstadia(ahora)
-      await this.reservas.guardar(reserva)
-    }
-    return porAvanzar.length
+    return procesarLote(this.reservas, porAvanzar, (reserva) => reserva.avanzarEstadia(ahora))
   }
 }
 

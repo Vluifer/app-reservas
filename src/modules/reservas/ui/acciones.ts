@@ -6,6 +6,7 @@ import { requerirActor } from '@/modules/identidad/ui/sesion'
 import { ROLES_ANFITRION } from '@/shared/domain/Actor'
 import { conParametro, ejecutarYVolver, manejarErrores, type EstadoAccion } from '@/shared/ui/acciones'
 import { numero, texto, textoOpcional } from '@/shared/ui/formulario'
+import { rutaDeVuelta } from './ruta-de-vuelta'
 
 // --- Huésped ---
 
@@ -34,14 +35,15 @@ export async function cancelarReserva(reservaId: string) {
 
 const RUTA_RECIBIDAS = '/dashboard/reservas'
 
-export async function confirmarReserva(reservaId: string) {
+/** `volverA`: ruta del panel a la que volver (p. ej. el calendario en el mismo día); por defecto, Reservas recibidas. */
+export async function confirmarReserva(reservaId: string, volverA?: unknown) {
   const actor = await requerirActor(ROLES_ANFITRION)
-  await ejecutarYVolver(RUTA_RECIBIDAS, 'Reserva confirmada', () => reservas.confirmar.ejecutar(actor, reservaId))
+  await ejecutarYVolver(rutaDeVuelta(volverA, RUTA_RECIBIDAS), 'Reserva confirmada', () => reservas.confirmar.ejecutar(actor, reservaId))
 }
 
-export async function rechazarReserva(reservaId: string) {
+export async function rechazarReserva(reservaId: string, volverA?: unknown) {
   const actor = await requerirActor(ROLES_ANFITRION)
-  await ejecutarYVolver(RUTA_RECIBIDAS, 'Reserva rechazada', () => reservas.rechazar.ejecutar(actor, reservaId))
+  await ejecutarYVolver(rutaDeVuelta(volverA, RUTA_RECIBIDAS), 'Reserva rechazada', () => reservas.rechazar.ejecutar(actor, reservaId))
 }
 
 export async function cancelarReservaComoPropietario(reservaId: string) {

@@ -64,7 +64,7 @@ export default async function BuscarApartamentosPagina({ searchParams }: { searc
 
   return (
     <div className="space-y-8">
-      <FormularioBusqueda valores={filtros} compacto />
+      <FormularioBusqueda valores={filtros} variante="compacta" />
 
       <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
         <div>
@@ -101,49 +101,52 @@ export default async function BuscarApartamentosPagina({ searchParams }: { searc
       {error && <Alerta tipo="error">{error}</Alerta>}
 
       {resultado && (
-        <section aria-label="Resultados" className="space-y-10">
-          <RejillaApartamentos apartamentos={resultado.items} consulta={consultaDetalle} />
+        /* Franja gris a todo el ancho hasta el pie (anula el margen inferior de main): deja ver la sombra de las tarjetas */
+        <div className="!mt-10 -mb-16 ml-[calc(50%-50vw)] w-screen bg-banda sm:-mb-24">
+          <section aria-label="Resultados" className="mx-auto max-w-6xl space-y-10 px-4 py-12 sm:px-6 sm:py-16">
+            <RejillaApartamentos apartamentos={resultado.items} consulta={consultaDetalle} />
 
-          {resultado.totalPaginas > 1 && (
-            <nav aria-label="Paginación" className="flex flex-wrap items-center justify-center gap-1 border-t border-borde pt-8">
-              {resultado.pagina > 1 && (
-                <Link
-                  href={conFiltros({ pagina: String(resultado.pagina - 1) })}
-                  className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-tinta underline-offset-4 hover:underline"
-                >
-                  Anterior
-                </Link>
-              )}
-              {paginasVisibles(resultado.pagina, resultado.totalPaginas).map((p, i) =>
-                p === null ? (
-                  <span key={`salto-${i}`} aria-hidden className="px-1 text-tinta-suave">
-                    …
-                  </span>
-                ) : (
+            {resultado.totalPaginas > 1 && (
+              <nav aria-label="Paginación" className="flex flex-wrap items-center justify-center gap-1 border-t border-borde pt-8">
+                {resultado.pagina > 1 && (
                   <Link
-                    key={p}
-                    href={conFiltros({ pagina: String(p) })}
-                    aria-current={p === resultado.pagina ? 'page' : undefined}
-                    aria-label={`Página ${p}`}
-                    className={`inline-flex size-11 items-center justify-center rounded-full text-sm tabular-nums transition-colors ${
-                      p === resultado.pagina ? 'bg-tinta font-semibold text-white' : 'text-tinta hover:bg-hundido'
-                    }`}
+                    href={conFiltros({ pagina: String(resultado.pagina - 1) })}
+                    className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-tinta underline-offset-4 hover:underline"
                   >
-                    {p}
+                    Anterior
                   </Link>
-                ),
-              )}
-              {resultado.pagina < resultado.totalPaginas && (
-                <Link
-                  href={conFiltros({ pagina: String(resultado.pagina + 1) })}
-                  className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-tinta underline-offset-4 hover:underline"
-                >
-                  Siguiente
-                </Link>
-              )}
-            </nav>
-          )}
-        </section>
+                )}
+                {paginasVisibles(resultado.pagina, resultado.totalPaginas).map((p, i) =>
+                  p === null ? (
+                    <span key={`salto-${i}`} aria-hidden className="px-1 text-tinta-suave">
+                      …
+                    </span>
+                  ) : (
+                    <Link
+                      key={p}
+                      href={conFiltros({ pagina: String(p) })}
+                      aria-current={p === resultado.pagina ? 'page' : undefined}
+                      aria-label={`Página ${p}`}
+                      className={`inline-flex size-11 items-center justify-center rounded-full text-sm tabular-nums transition-colors ${
+                        p === resultado.pagina ? 'bg-tinta font-semibold text-white' : 'text-tinta hover:bg-hundido'
+                      }`}
+                    >
+                      {p}
+                    </Link>
+                  ),
+                )}
+                {resultado.pagina < resultado.totalPaginas && (
+                  <Link
+                    href={conFiltros({ pagina: String(resultado.pagina + 1) })}
+                    className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-tinta underline-offset-4 hover:underline"
+                  >
+                    Siguiente
+                  </Link>
+                )}
+              </nav>
+            )}
+          </section>
+        </div>
       )}
     </div>
   )

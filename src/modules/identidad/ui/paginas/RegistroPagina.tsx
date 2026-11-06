@@ -12,11 +12,11 @@ export default async function RegistroPagina() {
   return (
     <MarcoAcceso
       titulo="Crear cuenta"
-      descripcion="Reserva o publica tu apartamento en minutos."
+      descripcion="Crea tu cuenta en Morada para reservar o publicar tu apartamento."
       foto={IMAGEN_REGISTRO}
       frase={{
-        titulo: 'Reserva directo con el propietario',
-        texto: 'Sin intermediarios entre tú y quien alquila el apartamento.',
+        titulo: 'Tu casa por unos días',
+        texto: 'Reserva directamente con quien alquila el apartamento, sin intermediarios.',
       }}
       pie={
         <>

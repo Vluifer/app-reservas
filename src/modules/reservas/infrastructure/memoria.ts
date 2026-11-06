@@ -57,6 +57,12 @@ export class EnMemoriaReservaRepository implements ReservaRepository {
     return this.todas().filter((r) => r.propietarioId === propietarioId)
   }
 
+  async listarPorPropietarioEnRango(propietarioId: string, desde: Date, hasta: Date) {
+    return this.todas()
+      .filter((r) => r.propietarioId === propietarioId && r.rango.inicio <= hasta && r.rango.fin >= desde)
+      .sort((a, b) => a.rango.inicio.getTime() - b.rango.inicio.getTime())
+  }
+
   async listarPendientesVencidas(ahora: Date) {
     return this.todas().filter((r) => r.estaVencida(ahora))
   }

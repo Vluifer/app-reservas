@@ -52,6 +52,9 @@ export interface FilaVitrina {
 export interface Vitrina {
   recientes: ApartamentoDTO[]
   ciudades: FilaVitrina[]
+  /** Toda la oferta activa, no solo la que cabe en las filas */
+  totalApartamentos: number
+  totalCiudades: number
 }
 
 /** Portada del catálogo: lo más reciente y una fila por cada ciudad con más oferta. */
@@ -59,17 +62,22 @@ export class ObtenerVitrina {
   constructor(private readonly apartamentos: ApartamentoRepository) {}
 
   async ejecutar({ ciudades = 3, porFila = 8 }: { ciudades?: number; porFila?: number } = {}): Promise<Vitrina> {
-    const [recientes, conOferta] = await Promise.all([
+    const [recientes, todasLasCiudades] = await Promise.all([
       this.apartamentos.buscarActivos({ pagina: 1, porPagina: porFila }),
-      this.apartamentos.ciudadesConOferta(ciudades),
+      this.apartamentos.ciudadesConOferta(),
     ])
     const filas = await Promise.all(
-      conOferta.map(async ({ ciudad, total }) => {
+      todasLasCiudades.slice(0, ciudades).map(async ({ ciudad, total }) => {
         const pagina = await this.apartamentos.buscarActivos({ ciudad, pagina: 1, porPagina: porFila })
         return { ciudad, total, apartamentos: pagina.items.map(aApartamentoDTO) }
       }),
     )
-    return { recientes: recientes.items.map(aApartamentoDTO), ciudades: filas }
+    return {
+      recientes: recientes.items.map(aApartamentoDTO),
+      ciudades: filas,
+      totalApartamentos: recientes.total,
+      totalCiudades: todasLasCiudades.length,
+    }
   }
 }
 
@@ -106,7 +114,7 @@ export class ObtenerApartamento {
     const apartamento = await this.apartamentos.buscarPorId(apartamentoId)
     const visible =
       apartamento &&
-      apartamento.estado !== 'ELIMINADO' &&
+      !apartamento.estaEliminado() &&
       (apartamento.estaActivo() || (actor !== null && apartamento.puedeSerGestionadoPor(actor)))
     if (!visible) throw new NoEncontradoError('Apartamento no encontrado')
     return aApartamentoDTO(apartamento)

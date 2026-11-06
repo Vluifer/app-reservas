@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import { BotonEnviar } from '@/shared/ui/boton-enviar'
 import { Alerta, AreaTexto, Campo } from '@/shared/ui/componentes'
 import { reservar } from '../acciones'
+import { HORAS_PARA_CONFIRMAR } from '../reglas'
 
 type Props = { apartamentoId: string; llegada: string; salida: string; adultos: string; ninos: string }
 
@@ -23,7 +24,7 @@ export function FormularioReserva({ apartamentoId, llegada, salida, adultos, nin
 
       {estado?.error && <Alerta tipo="error">{estado.error}</Alerta>}
       <BotonEnviar className="w-full">Solicitar reserva</BotonEnviar>
-      <p className="text-center text-xs leading-5 text-tinta-suave">El propietario tiene 24 horas para confirmarla.</p>
+      <p className="text-center text-xs leading-5 text-tinta-suave">El propietario tiene {HORAS_PARA_CONFIRMAR} horas para confirmarla.</p>
     </form>
   )
 }

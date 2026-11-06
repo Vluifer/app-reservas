@@ -70,6 +70,8 @@ ui  ──►  contenedor.ts  ──►  application  ──►  domain  ◄─�
 - `contenedor.ts` es el único lugar donde se decide "el repositorio real es Prisma". Lo usan solo las capas de entrada: la `ui/` de los módulos (páginas y Server Actions) y las rutas de `src/app`.
 - `ui/` no importa `infrastructure/`: llega a los casos de uso a través del contenedor. La sesión (`identidad/ui/sesion.ts`) y la navbar viven en la `ui` de identidad.
 - `shared/` no depende de ningún módulo.
+- **Entre módulos:** el `domain/` y la `application/` de un módulo no importan nada de otro módulo. La `infrastructure/` solo puede usar los puertos (`domain/`) de otro módulo, como capa anticorrupción. La `ui/` puede usar la `ui/` de otro módulo (sesión, componentes) y sus DTO de `application/`, pero no su dominio.
+- `src/app/` solo enruta: reexporta páginas de `modules/*/ui`, compone layouts y expone rutas de API a través del contenedor; no importa dominio, casos de uso ni infraestructura.
 - Estas reglas las verifica ESLint (`no-restricted-imports` en `eslint.config.mjs`): `npm run lint` falla si se rompen.
 - Un módulo no usa el modelo interno de otro. Ejemplo: `reservas` consulta apartamentos a través de `CatalogoApartamentosDesdeRepositorio` (capa anticorrupción).
 
@@ -99,6 +101,9 @@ Los errores de negocio (`ErrorDeDominio`) se muestran al usuario; cualquier otro
 
 - **Sin dobles reservas:** la creación bloquea la fila del apartamento (`SELECT … FOR UPDATE`) dentro de una transacción. Hay una prueba de integración que lanza 8 reservas simultáneas y verifica que solo entra una.
 - **Sin cambios que se pisen (bloqueo optimista):** `Apartamento` y `Reserva` tienen una columna `version`. Cada guardado hace `UPDATE … WHERE version = <la leída>` y la incrementa; si otra petición guardó antes, se rechaza con `ConflictoDeConcurrenciaError` y el usuario ve "Recarga la página e inténtalo de nuevo". Así, por ejemplo, una confirmación y una cancelación simultáneas no pueden aplicarse las dos, ni dos subidas de imágenes a la vez superar el límite. La versión la lleva el repositorio (`shared/infrastructure/versiones.ts`), no el dominio.
+  - **Alcance:** protege contra peticiones que ocurren *a la vez* (cada petición lee y guarda dentro de su propia ejecución). **No** detecta formularios con datos viejos: si alguien deja abierta la edición de un apartamento, otra persona guarda cambios y luego la primera envía su formulario, esos datos sobrescriben los anteriores. Para cubrirlo habría que enviar la versión leída en el formulario y exigirla al guardar.
+  - Los repositorios separan **crear** (agregado nuevo: `ApartamentoRepository.crear`, `ReservaRepository.crearSiHayDisponibilidad`) de **guardar** (actualizar uno leído del repositorio). Llamar a `guardar` con un agregado nuevo es un error de programación y falla en lugar de insertar.
+- **Tareas programadas tolerantes a conflictos:** `/api/cron/expirar-reservas` expira solicitudes vencidas y avanza estadías por separado (si una tarea falla, la otra corre igual). Si una reserva cambia por otra petición durante la tarea, se omite y la próxima corrida la vuelve a evaluar; la respuesta indica `{ procesadas, omitidas }` por tarea.
 - **Precio calculado en el servidor:** noches + limpieza + 10% de servicio + 19% de impuestos.
 - **Ciclo de vida:** `PENDIENTE → CONFIRMADA | RECHAZADA | CANCELADA | EXPIRADA`, `CONFIRMADA → CANCELADA | EN_CURSO → COMPLETADA`. La entidad `Reserva` calcula qué acciones admite en cada momento (`accionesDisponibles`) y la interfaz solo muestra esos botones.
 - **Cancelación:** una pendiente se cancela sin costo; una confirmada solo antes del día de llegada (hora de Bogotá). Una vez empezada la estadía ya no se puede cancelar.

@@ -5,7 +5,7 @@ import { asegurar } from '@/shared/domain/errores'
 import type { PoliticaCancelacion } from '@/shared/domain/PoliticaCancelacion'
 import { hoy, type RangoFechas } from '@/shared/domain/RangoFechas'
 import { calcularPrecio, type DesglosePrecio } from './CalculadoraPrecio'
-import { ESTADOS_QUE_OCUPAN, puedeTransicionar, type EstadoReserva } from './EstadoReserva'
+import { esEstadiaAceptada, ESTADOS_QUE_OCUPAN, puedeTransicionar, type EstadoReserva } from './EstadoReserva'
 import { TransicionInvalidaError } from './errores'
 import { calcularReembolso } from './Reembolso'
 
@@ -160,11 +160,25 @@ export class Reserva {
   }
 
   /**
-   * Estado que ve el usuario: una pendiente vencida ya es EXPIRADA en la práctica,
-   * aunque la tarea programada todavía no la haya marcado.
+   * Estado que ve el usuario, al día aunque la tarea programada todavía no lo haya guardado:
+   * una pendiente vencida ya es EXPIRADA; una estadía aceptada está EN_CURSO desde el día de llegada
+   * y COMPLETADA desde el día de salida.
    */
   estadoVigente(ahora: Date): EstadoReserva {
-    return this.estaVencida(ahora) ? 'EXPIRADA' : this.props.estado
+    if (this.estaVencida(ahora)) return 'EXPIRADA'
+    const { estado } = this.props
+    if ((estado === 'CONFIRMADA' || estado === 'EN_CURSO') && this.estadiaTerminada(ahora)) return 'COMPLETADA'
+    if (estado === 'CONFIRMADA' && this.estadiaEmpezada(ahora)) return 'EN_CURSO'
+    return estado
+  }
+
+  /**
+   * Aparece en el calendario del propietario: estadías aceptadas (confirmada, en curso, completada)
+   * y solicitudes pendientes que aún no vencen. Canceladas, rechazadas y expiradas no.
+   */
+  seMuestraEnCalendario(ahora: Date): boolean {
+    const estado = this.estadoVigente(ahora)
+    return esEstadiaAceptada(estado) || estado === 'PENDIENTE'
   }
 
   /** Lo que se puede hacer ahora mismo. Coincide con lo que aceptan confirmar(), rechazar() y cancelar(). */

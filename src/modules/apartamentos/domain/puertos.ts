@@ -25,29 +25,19 @@ export interface ApartamentoRepository {
   buscarPorId(id: string): Promise<Apartamento | null>
   /** En cualquier estado, incluso eliminados (p. ej. para mostrar el historial de reservas). */
   buscarPorIds(ids: string[]): Promise<Apartamento[]>
+  /** Guarda un apartamento NUEVO (recién publicado), con sus imágenes. */
+  crear(apartamento: Apartamento): Promise<void>
   /**
-   * Crea el apartamento si es nuevo o actualiza uno leído de este repositorio (con sus imágenes).
+   * Actualiza un apartamento leído de este repositorio (con sus imágenes).
    * Lanza ConflictoDeConcurrenciaError si otra petición lo guardó entretanto (bloqueo optimista).
    */
   guardar(apartamento: Apartamento): Promise<void>
   /** Solo apartamentos ACTIVOS, del más reciente al más antiguo. */
   buscarActivos(criterios: CriteriosBusqueda): Promise<Pagina<Apartamento>>
-  /** Ciudades con apartamentos ACTIVOS, de la que más tiene a la que menos. */
-  ciudadesConOferta(limite: number): Promise<CiudadConOferta[]>
+  /** Ciudades con apartamentos ACTIVOS, de la que más tiene a la que menos. Sin límite: todas. */
+  ciudadesConOferta(limite?: number): Promise<CiudadConOferta[]>
   /** Todos los del propietario excepto los eliminados. */
   listarPorPropietario(propietarioId: string): Promise<Apartamento[]>
-}
-
-export interface ArchivoImagen {
-  nombre: string
-  tipo: string
-  tamano: number
-  contenido: ArrayBuffer
-}
-
-export interface AlmacenImagenes {
-  subir(archivo: ArchivoImagen, carpeta: string): Promise<{ url: string; publicId: string }>
-  eliminar(publicId: string): Promise<void>
 }
 
 /** Lo implementa el módulo de reservas: qué apartamentos están ocupados en un rango. */

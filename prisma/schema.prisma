@@ -16,6 +16,9 @@ model Usuario {
   password  String
   telefono  String?
   rol       RolUsuario @default(CLIENTE)
+  // Foto de perfil en el almacén de imágenes (Cloudinary); publicId sirve para borrarla
+  fotoUrl      String?
+  fotoPublicId String?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 

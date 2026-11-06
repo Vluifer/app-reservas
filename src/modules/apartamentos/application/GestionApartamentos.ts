@@ -16,7 +16,7 @@ export class PublicarApartamento {
   async ejecutar(actor: Actor, input: DatosApartamentoInput): Promise<ApartamentoDTO> {
     if (!esAnfitrion(actor)) throw new NoAutorizadoError('Solo los propietarios pueden publicar apartamentos')
     const apartamento = Apartamento.publicar(actor.id, aDatosApartamento(input), this.reloj.ahora())
-    await this.apartamentos.guardar(apartamento)
+    await this.apartamentos.crear(apartamento)
     return aApartamentoDTO(apartamento)
   }
 }
@@ -48,10 +48,9 @@ export class ObtenerApartamentoParaGestion {
   constructor(private readonly apartamentos: ApartamentoRepository) {}
 
   async ejecutar(actor: Actor, apartamentoId: string): Promise<ApartamentoDTO> {
-    const apartamento = await this.apartamentos.buscarPorId(apartamentoId)
-    if (!apartamento || apartamento.estado === 'ELIMINADO' || !apartamento.puedeSerGestionadoPor(actor)) {
-      throw new NoEncontradoError('Apartamento no encontrado')
-    }
+    const apartamento = await cargarGestionable(this.apartamentos, actor, apartamentoId).catch((error) => {
+      throw error instanceof NoAutorizadoError ? new NoEncontradoError('Apartamento no encontrado') : error
+    })
     return aApartamentoDTO(apartamento)
   }
 }
@@ -72,7 +71,7 @@ export async function cargarGestionable(
   apartamentoId: string,
 ): Promise<Apartamento> {
   const apartamento = await apartamentos.buscarPorId(apartamentoId)
-  if (!apartamento || apartamento.estado === 'ELIMINADO') throw new NoEncontradoError('Apartamento no encontrado')
+  if (!apartamento || apartamento.estaEliminado()) throw new NoEncontradoError('Apartamento no encontrado')
   if (!apartamento.puedeSerGestionadoPor(actor)) throw new NoAutorizadoError()
   return apartamento
 }

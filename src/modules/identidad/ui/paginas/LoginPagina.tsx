@@ -13,7 +13,7 @@ export default async function LoginPagina({ searchParams }: { searchParams: Prom
   return (
     <MarcoAcceso
       titulo="Iniciar sesión"
-      descripcion="Accede para reservar y seguir tus estadías."
+      descripcion="Entra a Morada para reservar y seguir tus estadías."
       foto={IMAGEN_LOGIN}
       frase={{
         titulo: 'Tus estadías, siempre a mano',

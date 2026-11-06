@@ -112,6 +112,15 @@ export class PrismaReservaRepository implements ReservaRepository {
     return filas.map(this.cargar)
   }
 
+  async listarPorPropietarioEnRango(propietarioId: string, desde: Date, hasta: Date) {
+    const filas = await this.db.reserva.findMany({
+      where: { apartamento: { propietarioId }, fechaInicio: { lte: hasta }, fechaFin: { gte: desde } },
+      include: CON_APARTAMENTO,
+      orderBy: { fechaInicio: 'asc' },
+    })
+    return filas.map(this.cargar)
+  }
+
   async listarPendientesVencidas(ahora: Date) {
     const filas = await this.db.reserva.findMany({
       where: { estado: 'PENDIENTE', expiraEn: { lte: ahora } },

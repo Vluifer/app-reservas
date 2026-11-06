@@ -24,6 +24,8 @@ export class PrismaUsuarioRepository implements UsuarioRepository {
       password: usuario.passwordHash,
       telefono: usuario.telefono,
       rol: usuario.rol,
+      fotoUrl: usuario.foto?.url ?? null,
+      fotoPublicId: usuario.foto?.publicId ?? null,
     }
     try {
       await this.db.usuario.upsert({
@@ -48,6 +50,7 @@ function aDominio(fila: FilaUsuario): Usuario {
     passwordHash: fila.password,
     telefono: fila.telefono,
     rol: fila.rol,
+    foto: fila.fotoUrl && fila.fotoPublicId ? { url: fila.fotoUrl, publicId: fila.fotoPublicId } : null,
     creadoEn: fila.createdAt,
   })
 }

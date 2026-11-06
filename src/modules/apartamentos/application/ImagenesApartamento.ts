@@ -1,11 +1,9 @@
 import type { Actor } from '@/shared/domain/Actor'
 import { asegurar } from '@/shared/domain/errores'
-import type { AlmacenImagenes, ApartamentoRepository, ArchivoImagen } from '../domain/puertos'
+import { validarArchivoImagen, type AlmacenImagenes, type ArchivoImagen } from '@/shared/domain/imagenes'
+import type { ApartamentoRepository } from '../domain/puertos'
 import { aApartamentoDTO, type ApartamentoDTO } from './ApartamentoDTO'
 import { cargarGestionable } from './GestionApartamentos'
-
-export const TIPOS_IMAGEN_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp']
-export const TAMANO_MAXIMO_IMAGEN = 5 * 1024 * 1024
 
 export class SubirImagenesApartamento {
   constructor(
@@ -17,10 +15,7 @@ export class SubirImagenesApartamento {
     const apartamento = await cargarGestionable(this.apartamentos, actor, apartamentoId)
 
     asegurar(archivos.length > 0, 'Selecciona al menos una imagen')
-    for (const archivo of archivos) {
-      asegurar(TIPOS_IMAGEN_PERMITIDOS.includes(archivo.tipo), `${archivo.nombre}: formato no permitido (usa JPG, PNG o WebP)`)
-      asegurar(archivo.tamano <= TAMANO_MAXIMO_IMAGEN, `${archivo.nombre}: supera el máximo de 5 MB`)
-    }
+    archivos.forEach(validarArchivoImagen)
     apartamento.asegurarEspacioParaImagenes(archivos.length)
 
     const subidas: { url: string; publicId: string }[] = []

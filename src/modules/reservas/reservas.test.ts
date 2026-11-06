@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { apartamentoReservable, admin, cliente, otroCliente, propietario, RelojFijo } from '../../../tests/fabricas'
+import { apartamentoReservable, admin, cliente, otroCliente, otroPropietario, propietario, RelojFijo } from '../../../tests/fabricas'
 import { ConflictoDeConcurrenciaError, NoAutorizadoError, NoEncontradoError } from '@/shared/domain/errores'
 import {
+  ConsultarCalendario,
   ConsultarFechasOcupadas,
   ListarReservasDeCliente,
   ListarReservasDePropietario,
@@ -213,15 +214,28 @@ describe('Módulo reservas', () => {
       await new ConfirmarReserva(repo, reloj).ejecutar(propietario, id)
       const avanzar = new AvanzarEstadias(repo, reloj)
 
-      expect(await avanzar.ejecutar()).toBe(0)
+      expect(await avanzar.ejecutar()).toEqual({ procesadas: 0, omitidas: 0 })
       reloj.irA('2030-01-20T15:00:00Z')
-      expect(await avanzar.ejecutar()).toBe(1)
+      expect(await avanzar.ejecutar()).toEqual({ procesadas: 1, omitidas: 0 })
       expect((await repo.buscarPorId(id))?.estado).toBe('EN_CURSO')
 
       reloj.irA('2030-01-23T15:00:00Z')
-      expect(await avanzar.ejecutar()).toBe(1)
+      expect(await avanzar.ejecutar()).toEqual({ procesadas: 1, omitidas: 0 })
       expect((await repo.buscarPorId(id))?.estado).toBe('COMPLETADA')
-      expect(await avanzar.ejecutar()).toBe(0)
+      expect(await avanzar.ejecutar()).toEqual({ procesadas: 0, omitidas: 0 })
+    })
+
+    it('el estado que se muestra avanza con las fechas aunque la tarea programada no haya corrido', async () => {
+      const { id } = await crear.ejecutar(cliente, solicitud())
+      await new ConfirmarReserva(repo, reloj).ejecutar(propietario, id)
+      const listar = new ListarReservasDeCliente(repo, reloj)
+
+      reloj.irA('2030-01-20T15:00:00Z') // día de llegada
+      expect((await listar.ejecutar(cliente))[0]).toMatchObject({ estado: 'EN_CURSO', finalizada: false, aceptada: true })
+
+      reloj.irA('2030-01-23T15:00:00Z') // día de salida
+      expect((await listar.ejecutar(cliente))[0]).toMatchObject({ estado: 'COMPLETADA', finalizada: true, aceptada: true })
+      expect((await repo.buscarPorId(id))?.estado).toBe('CONFIRMADA') // lo guardado no cambia hasta que corra la tarea
     })
 
     it('si el propietario confirma y el huésped cancela a la vez, solo se guarda uno de los dos cambios', async () => {
@@ -244,11 +258,104 @@ describe('Módulo reservas', () => {
       await new ConfirmarReserva(repo, reloj).ejecutar(propietario, confirmada.id)
       const expirar = new ExpirarReservasPendientes(repo, reloj)
 
-      expect(await expirar.ejecutar()).toBe(0)
+      expect(await expirar.ejecutar()).toEqual({ procesadas: 0, omitidas: 0 })
       reloj.avanzarHoras(25)
-      expect(await expirar.ejecutar()).toBe(1)
+      expect(await expirar.ejecutar()).toEqual({ procesadas: 1, omitidas: 0 })
       expect((await repo.buscarPorId(vencera.id))?.estado).toBe('EXPIRADA')
       expect((await repo.buscarPorId(confirmada.id))?.estado).toBe('CONFIRMADA')
+    })
+
+    it('si otra petición cambia una reserva durante la tarea, la omite y sigue con las demás', async () => {
+      const primera = await crear.ejecutar(cliente, solicitud())
+      const segunda = await crear.ejecutar(otroCliente, solicitud({ llegada: '2030-02-01', salida: '2030-02-03' }))
+      reloj.avanzarHoras(25)
+
+      // La primera reserva que la tarea intente guardar choca con un cambio simultáneo
+      const guardarReal = repo.guardar.bind(repo)
+      let primerIntento = true
+      repo.guardar = async (reserva) => {
+        if (primerIntento) {
+          primerIntento = false
+          throw new ConflictoDeConcurrenciaError()
+        }
+        return guardarReal(reserva)
+      }
+
+      const expirar = new ExpirarReservasPendientes(repo, reloj)
+      expect(await expirar.ejecutar()).toEqual({ procesadas: 1, omitidas: 1 })
+      const estados = [(await repo.buscarPorId(primera.id))?.estado, (await repo.buscarPorId(segunda.id))?.estado].sort()
+      expect(estados).toEqual(['EXPIRADA', 'PENDIENTE'])
+
+      // La próxima corrida termina el trabajo
+      expect(await expirar.ejecutar()).toEqual({ procesadas: 1, omitidas: 0 })
+    })
+  })
+  describe('Calendario', () => {
+    it('se muestran las aceptadas y las pendientes vigentes; no las canceladas, rechazadas ni vencidas', async () => {
+      const visible = async (id: string) => (await repo.buscarPorId(id))!.seMuestraEnCalendario(reloj.ahora())
+
+      const pendiente = await crear.ejecutar(cliente, solicitud())
+      const confirmada = await crear.ejecutar(cliente, solicitud({ llegada: '2030-02-01', salida: '2030-02-03' }))
+      await new ConfirmarReserva(repo, reloj).ejecutar(propietario, confirmada.id)
+      const rechazada = await crear.ejecutar(cliente, solicitud({ llegada: '2030-02-05', salida: '2030-02-07' }))
+      await new RechazarReserva(repo, reloj).ejecutar(propietario, rechazada.id)
+      const cancelada = await crear.ejecutar(cliente, solicitud({ llegada: '2030-02-10', salida: '2030-02-12' }))
+      await new CancelarReserva(repo, reloj).ejecutar(cliente, cancelada.id)
+
+      expect(await visible(pendiente.id)).toBe(true)
+      expect(await visible(confirmada.id)).toBe(true)
+      expect(await visible(rechazada.id)).toBe(false)
+      expect(await visible(cancelada.id)).toBe(false)
+
+      reloj.avanzarHoras(25) // la pendiente vence sin respuesta
+      expect(await visible(pendiente.id)).toBe(false)
+
+      reloj.irA('2030-02-01T15:00:00Z')
+      await new AvanzarEstadias(repo, reloj).ejecutar()
+      expect((await repo.buscarPorId(confirmada.id))?.estado).toBe('EN_CURSO')
+      expect(await visible(confirmada.id)).toBe(true)
+
+      reloj.irA('2030-02-03T15:00:00Z')
+      await new AvanzarEstadias(repo, reloj).ejecutar()
+      expect((await repo.buscarPorId(confirmada.id))?.estado).toBe('COMPLETADA')
+      expect(await visible(confirmada.id)).toBe(true)
+    })
+
+    it('muestra las reservas del propietario que tocan el rango, con los bordes incluidos', async () => {
+      const catalogoDos = new CatalogoApartamentosFalso([
+        apartamentoReservable(),
+        apartamentoReservable({ id: 'apto-2', propietarioId: otroPropietario.id }),
+      ])
+      const crearDos = new CrearReserva(repo, catalogoDos, reloj)
+      const sale = await crearDos.ejecutar(cliente, solicitud({ llegada: '2030-01-15', salida: '2030-01-20' }))
+      const llega = await crearDos.ejecutar(cliente, solicitud({ llegada: '2030-01-27', salida: '2030-01-29' }))
+      await crearDos.ejecutar(cliente, solicitud({ llegada: '2030-01-12', salida: '2030-01-14' })) // termina antes del rango
+      await crearDos.ejecutar(cliente, solicitud({ apartamentoId: 'apto-2', llegada: '2030-01-21', salida: '2030-01-23' })) // de otro propietario
+
+      const calendario = new ConsultarCalendario(repo, reloj)
+      const ids = (await calendario.ejecutar(propietario, { desde: '2030-01-20', hasta: '2030-01-27' })).map((r) => r.id)
+
+      expect(ids.sort()).toEqual([sale.id, llega.id].sort())
+    })
+
+    it('no muestra las rechazadas ni las solicitudes vencidas', async () => {
+      const vencera = await crear.ejecutar(cliente, solicitud())
+      const rechazada = await crear.ejecutar(otroCliente, solicitud({ llegada: '2030-01-25', salida: '2030-01-27' }))
+      await new RechazarReserva(repo, reloj).ejecutar(propietario, rechazada.id)
+      const calendario = new ConsultarCalendario(repo, reloj)
+      const rango = { desde: '2030-01-14', hasta: '2030-02-24' }
+
+      expect((await calendario.ejecutar(propietario, rango)).map((r) => r.id)).toEqual([vencera.id])
+      reloj.avanzarHoras(25)
+      expect(await calendario.ejecutar(propietario, rango)).toEqual([])
+    })
+
+    it('rechaza rangos invertidos o de más de 6 semanas', async () => {
+      const calendario = new ConsultarCalendario(repo, reloj)
+
+      await expect(calendario.ejecutar(propietario, { desde: '2030-01-20', hasta: '2030-01-19' })).rejects.toThrow('6 semanas')
+      await expect(calendario.ejecutar(propietario, { desde: '2030-01-01', hasta: '2030-02-12' })).rejects.toThrow('6 semanas')
+      await expect(calendario.ejecutar(propietario, { desde: '2030-01-01', hasta: '2030-02-11' })).resolves.toEqual([])
     })
   })
 })

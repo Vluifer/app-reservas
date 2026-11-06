@@ -17,6 +17,7 @@ declare module 'next-auth' {
  * Adaptador de NextAuth (Auth.js v5). La verificación real de credenciales la hace el caso de uso
  * AutenticarUsuario, que se recibe como parámetro: este archivo no sabe cómo se construye.
  * Nota: el rol queda guardado en el JWT; si cambia, el usuario debe volver a iniciar sesión.
+ * El nombre sí se refresca al editar el perfil (unstable_update → trigger 'update').
  */
 export function crearAutenticacion(autenticarUsuario: AutenticarUsuario) {
   return NextAuth({
@@ -41,11 +42,12 @@ export function crearAutenticacion(autenticarUsuario: AutenticarUsuario) {
       }),
     ],
     callbacks: {
-      jwt({ token, user }) {
+      jwt({ token, user, trigger, session }) {
         if (user) {
           token.id = user.id
           token.rol = user.rol
         }
+        if (trigger === 'update' && typeof session?.user?.name === 'string') token.name = session.user.name
         return token
       },
       session({ session, token }) {

@@ -19,6 +19,11 @@ export interface ReservaRepository {
   hayConflicto(apartamentoId: string, rango: RangoFechas, ahora: Date): Promise<boolean>
   listarPorCliente(clienteId: string): Promise<Reserva[]>
   listarPorPropietario(propietarioId: string): Promise<Reserva[]>
+  /**
+   * Reservas de los apartamentos del propietario cuya estadía toca [desde, hasta], ambos incluidos:
+   * llegada <= hasta y salida >= desde (el día de salida cuenta). Ordenadas por llegada.
+   */
+  listarPorPropietarioEnRango(propietarioId: string, desde: Date, hasta: Date): Promise<Reserva[]>
   listarPendientesVencidas(ahora: Date): Promise<Reserva[]>
   /** CONFIRMADAS cuyo día de llegada ya llegó y EN_CURSO cuyo día de salida ya llegó. */
   listarEstadiasPorAvanzar(ahora: Date): Promise<Reserva[]>

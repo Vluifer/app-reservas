@@ -9,6 +9,7 @@ import { Alerta, AreaTexto, Campo, CLASE_CONTROL, CLASE_ETIQUETA } from '@/share
 import { formatoMoneda, MONEDA } from '@/shared/ui/formato'
 import type { ApartamentoDTO } from '../../application/ApartamentoDTO'
 import { IconoComodidad, normalizar } from './lista-comodidades'
+import { FichaApartamento } from './tarjeta-apartamento'
 
 type AccionFormulario = (estado: EstadoAccion, datos: FormData) => Promise<EstadoAccion>
 
@@ -137,41 +138,39 @@ type Vista = {
 
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`
 
-/** Tarjeta "Así se verá tu anuncio", igual a la de los resultados de búsqueda. */
+/** "Así se verá tu anuncio": la misma ficha de los resultados de búsqueda, con los datos que se van escribiendo. */
 function VistaPrevia({ vista, foto }: { vista: Vista; foto: string | null }) {
   const precio = Number(vista.precio)
   const vacio = 'text-tinta-tenue'
   return (
     <div aria-hidden className="rounded-bloque border border-borde p-5">
       <p className="text-sm font-medium text-tinta-suave">Así se verá tu anuncio</p>
-      <div className="relative mt-4 aspect-[4/3] overflow-hidden rounded-tarjeta bg-hundido">
-        {foto ? (
-          <Image src={foto} alt="" fill sizes="20rem" className="object-cover" />
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-sm text-tinta-suave">
-            <svg viewBox="0 0 24 24" className="size-7" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
-              <path d="M3.5 8.5a2 2 0 0 1 2-2h2l1.5-2h6l1.5 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z" />
-              <circle cx="12" cy="12.5" r="3.5" />
-            </svg>
-            Agregarás las fotos al publicar
-          </div>
-        )}
-      </div>
-      <div className="mt-3 space-y-0.5">
-        <p className={`font-semibold tracking-tight ${vista.nombre ? 'text-tinta' : vacio}`}>{vista.nombre || 'Nombre del apartamento'}</p>
-        <p className={`text-sm ${vista.ciudad ? 'text-tinta-suave' : vacio}`}>
-          {[vista.ciudad || 'Ciudad', vista.region].filter(Boolean).join(', ')}
-        </p>
-        <p className="text-sm text-tinta-suave">
-          Hasta {plural(vista.capacidad || 0, 'huésped', 'huéspedes')} · {plural(vista.habitaciones || 0, 'habitación', 'habitaciones')} ·{' '}
-          {plural(vista.banos || 0, 'baño', 'baños')}
-        </p>
-        <p className="pt-1.5 text-sm text-tinta-suave">
-          <span className="font-display text-base tabular-nums tracking-normal text-tinta">
-            {precio > 0 ? formatoMoneda(precio) : '$ —'}
-          </span>{' '}
-          / noche
-        </p>
+      <div className="mt-4">
+        <FichaApartamento
+          foto={
+            <div className="relative aspect-[4/3] overflow-hidden bg-hundido">
+              {foto ? (
+                <Image src={foto} alt="" fill sizes="20rem" className="object-cover" />
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-sm text-tinta-suave">
+                  <svg viewBox="0 0 24 24" className="size-7" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+                    <path d="M3.5 8.5a2 2 0 0 1 2-2h2l1.5-2h6l1.5 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z" />
+                    <circle cx="12" cy="12.5" r="3.5" />
+                  </svg>
+                  Agregarás las fotos al publicar
+                </div>
+              )}
+            </div>
+          }
+          nombre={vista.nombre || <span className={vacio}>Nombre del apartamento</span>}
+          ubicacion={
+            <span className={vista.ciudad ? undefined : vacio}>{[vista.ciudad || 'Ciudad', vista.region].filter(Boolean).join(', ')}</span>
+          }
+          capacidad={vista.capacidad || 0}
+          habitaciones={vista.habitaciones || 0}
+          banos={vista.banos || 0}
+          precio={precio > 0 ? formatoMoneda(precio) : '$ —'}
+        />
       </div>
     </div>
   )

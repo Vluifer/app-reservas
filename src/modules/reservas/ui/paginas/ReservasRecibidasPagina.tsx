@@ -4,6 +4,7 @@ import { ROLES_ANFITRION } from '@/shared/domain/Actor'
 import { BotonEnviar, BotonEnviarConfirmando } from '@/shared/ui/boton-enviar'
 import { Avatar, EstadoVacio, EtiquetaEstado, MensajesDeRuta, RangoFechasTexto } from '@/shared/ui/componentes'
 import { formatoDia, formatoFecha, formatoFechaHora, formatoMoneda } from '@/shared/ui/formato'
+import { FranjaPanel, PortadaPanel } from '@/shared/ui/portada-panel'
 import type { ReservaDTO } from '../../application/ReservaDTO'
 import { cancelarReservaComoPropietario, confirmarReserva, rechazarReserva } from '../acciones'
 import { DesglosePrecio } from '../componentes/desglose-precio'
@@ -19,7 +20,7 @@ function huespedes(r: ReservaDTO): string {
 function TarjetaRecibida({ reserva: r }: { reserva: ReservaDTO }) {
   const tieneAcciones = r.acciones.confirmar || r.acciones.rechazar || r.acciones.cancelar
   return (
-    <article className="space-y-5 rounded-bloque border border-borde bg-superficie p-5 sm:p-6">
+    <article className="space-y-5 rounded-tarjeta bg-superficie p-5 shadow-tarjeta sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <Avatar nombre={r.clienteNombre} />
@@ -43,7 +44,7 @@ function TarjetaRecibida({ reserva: r }: { reserva: ReservaDTO }) {
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-t border-borde pt-5">
         <div>
           <p className="text-sm text-tinta-suave">{r.apartamentoNombre}</p>
-          <p className="mt-1 font-display text-xl tabular-nums text-tinta">
+          <p className="mt-1 font-cifra text-xl tabular-nums text-tinta">
             <RangoFechasTexto desde={formatoDia(r.llegada)} hasta={formatoDia(r.salida)} />
           </p>
           <p className="mt-0.5 text-sm text-tinta-suave">
@@ -109,14 +110,18 @@ function FilaAnterior({ reserva: r }: { reserva: ReservaDTO }) {
   return (
     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4">
       <Avatar nombre={r.clienteNombre} tamano="sm" />
-      <div className="min-w-0 flex-1">
+      {/* basis-48: en móvil el nombre conserva su ancho y el precio y el estado bajan a otra línea */}
+      <div className="min-w-0 flex-1 basis-48">
         <p className="truncate font-medium text-tinta">{r.clienteNombre}</p>
-        <p className="truncate text-sm text-tinta-suave">
+        {/* relative: el texto sr-only del rango (posición absoluta) queda recortado aquí y no ensancha la página */}
+        <p className="relative truncate text-sm text-tinta-suave">
           {r.apartamentoNombre}, <RangoFechasTexto desde={formatoFecha(r.llegada)} hasta={formatoFecha(r.salida)} />
         </p>
       </div>
-      <span className="text-sm tabular-nums text-tinta">{formatoMoneda(r.precio.total)}</span>
-      <EtiquetaEstado estado={r.estado} />
+      <div className="flex items-center gap-3 max-sm:w-full max-sm:pl-13">
+        <span className="text-sm tabular-nums text-tinta">{formatoMoneda(r.precio.total)}</span>
+        <EtiquetaEstado estado={r.estado} />
+      </div>
     </li>
   )
 }
@@ -140,46 +145,49 @@ export default async function ReservasRecibidasPagina({
 
   return (
     <div className="space-y-12">
-      <MensajesDeRuta {...mensajes} />
-      <h1 className="font-display text-3xl text-tinta sm:text-4xl">Reservas recibidas</h1>
+      <PortadaPanel titulo="Reservas recibidas" descripcion="Responde las solicitudes a tiempo y sigue tus estadías confirmadas." />
 
-      {lista.length === 0 ? (
-        <EstadoVacio titulo="Aún no has recibido reservas" descripcion="Cuando un huésped solicite una estadía, aparecerá aquí para que la confirmes." />
-      ) : (
-        <>
-          {secciones.map((s) => (
-            <section key={s.id} aria-labelledby={s.id} className="space-y-5">
-              <h2 id={s.id} className={TITULO_SECCION}>
-                {s.titulo} <span className="font-sans text-base font-normal tabular-nums text-tinta-suave">({s.reservas.length})</span>
-              </h2>
-              {s.reservas.length === 0 ? (
-                <p className="text-tinta-suave">{s.vacio}</p>
-              ) : (
-                <ul className="space-y-5">
-                  {s.reservas.map((r) => (
-                    <li key={r.id}>
-                      <TarjetaRecibida reserva={r} />
-                    </li>
+      <FranjaPanel>
+        <MensajesDeRuta {...mensajes} />
+
+        {lista.length === 0 ? (
+          <EstadoVacio titulo="Aún no has recibido reservas" descripcion="Cuando un huésped solicite una estadía, aparecerá aquí para que la confirmes." />
+        ) : (
+          <>
+            {secciones.map((s) => (
+              <section key={s.id} aria-labelledby={s.id} className="space-y-5">
+                <h2 id={s.id} className={TITULO_SECCION}>
+                  {s.titulo} <span className="font-sans text-base font-normal tabular-nums text-tinta-suave">({s.reservas.length})</span>
+                </h2>
+                {s.reservas.length === 0 ? (
+                  <p className="text-tinta-suave">{s.vacio}</p>
+                ) : (
+                  <ul className="space-y-5">
+                    {s.reservas.map((r) => (
+                      <li key={r.id}>
+                        <TarjetaRecibida reserva={r} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            ))}
+
+            {anteriores.length > 0 && (
+              <section aria-labelledby="anteriores" className="space-y-5 border-t border-borde-control/30 pt-10">
+                <h2 id="anteriores" className={TITULO_SECCION}>
+                  Anteriores <span className="font-sans text-base font-normal tabular-nums text-tinta-suave">({anteriores.length})</span>
+                </h2>
+                <ul className="divide-y divide-borde overflow-hidden rounded-tarjeta bg-superficie shadow-tarjeta">
+                  {anteriores.map((r) => (
+                    <FilaAnterior key={r.id} reserva={r} />
                   ))}
                 </ul>
-              )}
-            </section>
-          ))}
-
-          {anteriores.length > 0 && (
-            <section aria-labelledby="anteriores" className="space-y-5 border-t border-borde pt-10">
-              <h2 id="anteriores" className={TITULO_SECCION}>
-                Anteriores <span className="font-sans text-base font-normal tabular-nums text-tinta-suave">({anteriores.length})</span>
-              </h2>
-              <ul className="divide-y divide-borde rounded-bloque border border-borde">
-                {anteriores.map((r) => (
-                  <FilaAnterior key={r.id} reserva={r} />
-                ))}
-              </ul>
-            </section>
-          )}
-        </>
-      )}
+              </section>
+            )}
+          </>
+        )}
+      </FranjaPanel>
     </div>
   )
 }

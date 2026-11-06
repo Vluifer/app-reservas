@@ -14,7 +14,7 @@ describe('PrismaApartamentoRepository (PostgreSQL real)', () => {
   async function publicar(cambios: Partial<DatosApartamentoInput> = {}, minutosDespues = 0) {
     const creado = new Date(AHORA.getTime() + minutosDespues * 60_000)
     const apartamento = Apartamento.publicar(propietarioId, aDatosApartamento(datosApartamento(cambios)), creado)
-    await repo.guardar(apartamento)
+    await repo.crear(apartamento)
     return apartamento
   }
 
@@ -42,6 +42,12 @@ describe('PrismaApartamentoRepository (PostgreSQL real)', () => {
     const imagenes = await bd.imagen.findMany({ where: { apartamentoId: apartamento.id } })
     expect(imagenes).toHaveLength(1)
     expect(imagenes[0]).toMatchObject({ publicId: 'p2', orden: 0, esPrincipal: true })
+  })
+
+  it('guardar() no inserta apartamentos nuevos: para eso está crear()', async () => {
+    const nuevo = Apartamento.publicar(propietarioId, aDatosApartamento(datosApartamento()), AHORA)
+    await expect(repo.guardar(nuevo)).rejects.toThrow('crear()')
+    expect(await bd.apartamento.count()).toBe(0)
   })
 
   it('busca por varios ids en cualquier estado', async () => {

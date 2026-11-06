@@ -68,7 +68,7 @@ export function FormularioRegistro() {
       </fieldset>
 
       <Campo etiqueta="Nombre" name="nombre" autoComplete="name" required minLength={2} />
-      <Campo etiqueta="Email" name="email" type="email" autoComplete="email" required />
+      <Campo etiqueta="Correo electrónico" name="email" type="email" autoComplete="email" required />
       <Campo etiqueta="Teléfono (opcional)" name="telefono" type="tel" autoComplete="tel" />
       <div>
         <CampoContrasena

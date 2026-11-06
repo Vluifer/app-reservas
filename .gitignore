@@ -24,3 +24,6 @@ npm-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Bocetos del asistente de diseño (brainstorming)
+.superpowers/

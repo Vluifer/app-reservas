@@ -81,6 +81,11 @@ export class Apartamento {
     return this.props.estado === 'ACTIVO'
   }
 
+  /** Eliminado = borrado lógico: se conserva por las reservas que lo referencian, pero ya no existe para nadie. */
+  estaEliminado(): boolean {
+    return this.props.estado === 'ELIMINADO'
+  }
+
   puedeSerGestionadoPor(actor: Actor): boolean {
     return esAdmin(actor) || actor.id === this.props.propietarioId
   }
@@ -130,7 +135,7 @@ export class Apartamento {
   }
 
   private asegurarNoEliminado(): void {
-    if (this.props.estado === 'ELIMINADO') throw new ErrorDeValidacion('El apartamento fue eliminado')
+    if (this.estaEliminado()) throw new ErrorDeValidacion('El apartamento fue eliminado')
   }
 }
 

@@ -1,6 +1,6 @@
 import { v2 as cloudinary } from 'cloudinary'
 import { ErrorDeDominio } from '@/shared/domain/errores'
-import type { AlmacenImagenes, ArchivoImagen } from '../domain/puertos'
+import type { AlmacenImagenes, ArchivoImagen } from '@/shared/domain/imagenes'
 
 export class CloudinaryAlmacenImagenes implements AlmacenImagenes {
   constructor(config: { cloudName: string; apiKey: string; apiSecret: string }) {

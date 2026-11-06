@@ -8,6 +8,7 @@ export interface UsuarioDTO {
   email: string
   telefono: string | null
   rol: Rol
+  fotoUrl: string | null
 }
 
 export function aUsuarioDTO(usuario: Usuario): UsuarioDTO {
@@ -17,5 +18,6 @@ export function aUsuarioDTO(usuario: Usuario): UsuarioDTO {
     email: usuario.email.valor,
     telefono: usuario.telefono,
     rol: usuario.rol,
+    fotoUrl: usuario.foto?.url ?? null,
   }
 }
