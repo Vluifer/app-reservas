@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+/* Marca Morada (docs/brand-guidelines.md). Tipografía "Real Estate Luxury":
+   Cinzel (romanas clásicas, solo mayúsculas) para titulares y logo; Josefin Sans para el texto. */
+@theme inline {
+  --font-sans: var(--font-josefin), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: var(--font-cinzel), Georgia, "Times New Roman", serif;
+}
+
+@theme {
+  /* Neutros: fondo blanco puro y grises piedra (un punto cálidos, a juego con el acento) */
+  --color-fondo: #ffffff;
+  --color-superficie: #ffffff;
+  --color-hundido: #f5f5f4; /* chips, skeletons, hover. Tinta-tenue encima: 5.3:1 */
+  --color-banda: #ebe9e6; /* franjas donde reposan las tarjetas: deja ver su sombra y elevación. Tinta-suave encima: 6.4:1 */
+  --color-borde: #e7e5e4; /* decorativo: tarjetas, divisores */
+  --color-borde-control: #8a8580; /* inputs y botón secundario: 3.65:1 */
+  --color-tinta: #0c0a09; /* texto principal: 19.8:1 */
+  --color-tinta-suave: #57534e; /* texto secundario: 7.6:1 */
+  --color-tinta-tenue: #6b6560; /* solo placeholder/meta: 5.7:1 */
+  --color-tinta-invertida-suave: #d6d3d1; /* secundario sobre tinta */
+
+  /* Acento: piedra. Botones, pestaña activa y foco. Blanco encima: 17.5:1 */
+  --color-acento: #1c1917;
+  --color-acento-hover: #292524;
+  --color-acento-texto: #1c1917; /* texto sobre acento-suave: 16:1 */
+  --color-acento-suave: #f5f5f4; /* "en curso", opción marcada */
+  --color-acento-claro: #d6d3d1; /* SOLO sobre tinta */
+
+  /* Dorado: el toque de lujo. Solo en detalles (contador de pendientes, filetes, enlace activo de la cabecera) */
+  --color-dorado: #a16207; /* blanco encima: 4.9:1 */
+  --color-dorado-claro: #d9b26a; /* SOLO sobre piedra: 8.8:1 */
+  --color-dorado-suave: #fbf3db; /* fondo de selección */
+
+  /* Cabecera: piedra, el mismo tono del acento */
+  --color-cabecera: #1c1917; /* blanco encima: 17.5:1; blanco/75: 10.2:1 */
+  /* Zona del panel del propietario: piedra media, para que la cabecera no se funda con ella (1.45:1 frente a la cabecera).
+     Blanco encima: 12:1; blanco/70: 7:1; dorado-claro: 6:1 */
+  --color-panel: #3b3531;
+
+  /* Calendario: un color por apartamento (paleta B, tonos tierra). Texto sobre fondo ≥ 6:1 */
+  --color-apto-1: #d6dfea; /* pizarra */
+  --color-apto-1-texto: #1e3a5f; /* 8.55:1 */
+  --color-apto-2: #d9e4d2; /* salvia */
+  --color-apto-2-texto: #2f4a1f; /* 7.54:1 */
+  --color-apto-3: #f1d6cb; /* terracota */
+  --color-apto-3-texto: #7c2d12; /* 6.79:1 */
+  --color-apto-4: #ede3d1; /* arena */
+  --color-apto-4-texto: #5b4321; /* 7.27:1 */
+  --color-apto-5: #e6d8e6; /* ciruela */
+  --color-apto-5-texto: #4a2545; /* 9.34:1 */
+  --color-apto-6: #d3e5e3; /* petróleo */
+  --color-apto-6-texto: #134e4a; /* 7.26:1 */
+  --color-apto-eliminado: #e7e5e4;
+  --color-apto-eliminado-texto: #57534e; /* 6.08:1 */
+
+  /* Semánticos */
+  --color-exito-texto: #166534;
+  --color-exito-suave: #dcfce7;
+  --color-aviso-texto: #854d0e;
+  --color-aviso-suave: #fef9c3;
+  --color-peligro: #b91c1c; /* blanco encima: 6.47:1 */
+  --color-peligro-hover: #991b1b;
+  --color-peligro-texto: #b91c1c;
+  --color-peligro-suave: #fef2f2;
+
+  /* Tipografía display (hero) */
+  --text-display: clamp(2.25rem, 1.5rem + 2.6vw, 3.5rem);
+  --text-display--line-height: 1.02;
+
+  /* Radios: suaves; las fotos y tarjetas más redondeadas que los controles */
+  --radius-control: 0.5rem;
+  --radius-tarjeta: 1rem;
+  --radius-bloque: 1.5rem;
+
+  /* Sombras: elementos flotantes y tarjetas de apartamento */
+  --shadow-flotante: 0 1px 2px rgb(0 0 0 / 0.06), 0 24px 48px -20px rgb(0 0 0 / 0.35);
+  /* Tarjetas de apartamento: reposan con sombra suave y se elevan al pasar el ratón */
+  --shadow-tarjeta: 0 4px 20px rgb(0 0 0 / 0.08);
+  --shadow-tarjeta-elevada: 0 12px 40px rgb(0 0 0 / 0.15);
+}
+
+/* Titulares: Cinzel. Solo tiene mayúsculas: para titulares cortos, nunca párrafos */
+@utility font-display {
+  font-family: var(--font-serif);
+  font-size-adjust: none;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Cifras (precios, fechas, totales): Josefin Sans firme; Cinzel no tiene cifras tabulares */
+@utility font-cifra {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Filas deslizables en pantallas táctiles: sin barra visible (se desliza con el dedo) */
+@utility sin-barra {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Solicitud pendiente en el calendario: rayado diagonal y borde punteado del color del texto */
+@utility rayado-pendiente {
+  /* Rayado suave (0.35): más opaco, los tonos claros como arena casi desaparecen sobre el fondo blanco */
+  background-image: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.35) 0 5px, transparent 5px 10px);
+  outline: 1.5px dashed currentColor;
+  outline-offset: -1.5px;
+  /* La utilidad gana a la regla base de :focus-visible: el foco de teclado se repone aquí (WCAG 2.4.7) */
+  &:focus-visible {
+    outline: 2px solid var(--color-acento);
+    outline-offset: 2px;
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    /* Josefin Sans tiene minúsculas muy bajas: se igualan a una altura x de 0,47 para que lea como 16 px reales */
+    font-size-adjust: 0.47;
+    scroll-padding-top: 6rem; /* la cabecera sticky (5rem) no tapa el foco (WCAG 2.4.11) */
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* La barra fija de reservar en móvil no debe tapar el foco */
+  :root:has(#barra-reserva) {
+    scroll-padding-bottom: 6rem;
+  }
+  /* ...ni el final del pie: se deja su alto debajo (la barra solo existe por debajo de lg) */
+  @media (width < 64rem) {
+    :root:has(#barra-reserva) footer {
+      padding-bottom: 5rem;
+    }
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-acento);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-dorado-suave);
+    color: var(--color-tinta);
+  }
+
+  /* Tailwind v4 quita cursor:pointer a los botones */
+  button:not(:disabled),
+  [role="button"]:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

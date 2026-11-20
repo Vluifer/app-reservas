@@ -1,1 +1,0 @@
-//Página principal/búsqueda

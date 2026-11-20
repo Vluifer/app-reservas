@@ -1,1 +1,0 @@
-// server accion to get list of apartamentos
